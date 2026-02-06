@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boards - Smart Board Admin</title>
+    <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <script src="js/auth.js"></script>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="logo/Ves.png" alt="VES Logo" class="logo-img">
+                <span class="logo-text">Smart<span>Board</span></span>
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <polyline points="9,22 9,12 15,12 15,22" />
+                        </svg></span>
+                    Dashboard
+                </a>
+                <a href="boards.html" class="nav-item active">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg></span>
+                    Boards
+                </a>
+                <a href="create-notice.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg></span>
+                    Create Notice
+                </a>
+                <a href="groups.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                            <path d="M16 3.13a4 4 0 010 7.75" />
+                        </svg></span>
+                    Groups
+                </a>
+                <a href="schedules.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg></span>
+                    Schedules
+                </a>
+                <a href="media.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21,15 16,10 5,21" />
+                        </svg></span>
+                    Media Library
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main -->
+        <main class="main">
+            <div class="page-header">
+                <h1>Registered Boards</h1>
+                <p>All smart boards registered in the system</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">All Boards</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="loadBoards()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="23,4 23,10 17,10" />
+                            <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Board ID</th>
+                            <th>Room</th>
+                            <th>Username</th>
+                            <th>Status</th>
+                            <th>Last Seen</th>
+                            <th>Registered</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="boardsTable">
+                        <tr>
+                            <td colspan="7">
+                                <div class="spinner"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js?v=20260204"></script>
+    <script src="js/api.js"></script>
+    <script>
+        connectWebSocket();
+        addWSListener((data) => {
+            if (data.type.includes('board')) loadBoards();
+        });
+
+        async function loadBoards() {
+            try {
+                const result = await api.get('/boards');
+                const tbody = document.getElementById('boardsTable');
+
+                if (!result.success || result.boards.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                <div class="empty-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                        <line x1="8" y1="21" x2="16" y2="21"/>
+                                        <line x1="12" y1="17" x2="12" y2="21"/>
+                                    </svg>
+                                </div>
+                                <p>No boards registered yet</p>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = result.boards.map(board => `
+                        <tr>
+                            <td><strong>${board.boardId}</strong></td>
+                            <td>${board.roomNumber}</td>
+                            <td>${board.username}</td>
+                            <td><span class="badge badge-${board.status}">${board.status}</span></td>
+                            <td>${timeSince(board.lastSeen)}</td>
+                            <td>${formatDate(board.registeredAt)}</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" onclick="removeBoard('${board.boardId}')">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                    </svg>
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Load boards error:', error);
+            }
+        }
+
+        async function removeBoard(boardId) {
+            if (!confirm(`Remove board "${boardId}"?`)) return;
+
+            try {
+                const result = await api.delete(`/boards/${boardId}`);
+                if (result.success) {
+                    showToast('Board removed successfully');
+                    loadBoards();
+                } else {
+                    showToast(result.error || 'Failed to remove board', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to remove board', 'error');
+            }
+        }
+
+        loadBoards();
+        setInterval(loadBoards, 15000);
+    </script>
+</body>
+
+</html>
