@@ -178,10 +178,13 @@
                     const status = getStatus(s);
                     const preview = s.content.length > 40 ? s.content.substring(0, 40) + '...' : s.content;
                     const targets = s.targetBoards === 'all' ? 'All Boards' : s.targetBoards.split('|').length + ' boards';
+                    const isRecurring = s.isRecurring === 'true';
+                    const recurringInfo = isRecurring ?
+                        `<span class="badge badge-info" title="Daily ${s.dailyStartTime}-${s.dailyEndTime}">🔄 Daily</span>` : '';
 
                     return `
                         <tr>
-                            <td><strong>${s.title}</strong></td>
+                            <td><strong>${s.title}</strong> ${recurringInfo}</td>
                             <td>${preview}</td>
                             <td><span class="badge badge-${s.priority}">${s.priority}</span></td>
                             <td>${targets}</td>

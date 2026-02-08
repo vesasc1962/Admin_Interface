@@ -140,6 +140,51 @@
         .checkbox-item input {
             width: auto;
         }
+
+        .days-selector {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+
+        .day-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--gray-700);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .day-checkbox:hover {
+            background: var(--gray-600);
+        }
+
+        .day-checkbox:has(input:checked) {
+            background: var(--primary);
+            color: white;
+        }
+
+        .day-checkbox input {
+            width: auto;
+            margin: 0;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .checkbox-label input {
+            width: auto;
+        }
     </style>
 </head>
 
@@ -324,6 +369,60 @@
                                 <label for="endTime">End Date & Time *</label>
                                 <input type="datetime-local" id="endTime" required>
                                 <small class="text-gray">Notice will stop showing after this time</small>
+                            </div>
+                        </div>
+
+                        <!-- Recurring Schedule Options -->
+                        <div class="form-group mt-4">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="isRecurring" onchange="toggleRecurring()">
+                                <span>🔄 Daily Recurring Schedule</span>
+                            </label>
+                            <small class="text-gray">Enable to show this notice every day during specific hours</small>
+                        </div>
+
+                        <div id="recurringOptions"
+                            style="display: none; margin-top: 1rem; padding: 1rem; background: var(--gray-800); border-radius: 8px;">
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label for="dailyStartTime">Daily Start Time *</label>
+                                    <input type="time" id="dailyStartTime" value="09:00">
+                                    <small class="text-gray">Show notice starting at this time each day</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dailyEndTime">Daily End Time *</label>
+                                    <input type="time" id="dailyEndTime" value="17:00">
+                                    <small class="text-gray">Stop showing notice at this time each day</small>
+                                </div>
+                            </div>
+
+                            <div class="form-group mt-3">
+                                <label>Days of Week</label>
+                                <div class="days-selector">
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="recurDays" value="0"> Sun
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="recurDays" value="1" checked> Mon
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="recurDays" value="2" checked> Tue
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="recurDays" value="3" checked> Wed
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="recurDays" value="4" checked> Thu
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="recurDays" value="5" checked> Fri
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="recurDays" value="6"> Sat
+                                    </label>
+                                </div>
+                                <small class="text-gray">Notice will only show on selected days</small>
                             </div>
                         </div>
 
@@ -562,6 +661,19 @@
             updatePreview();
         }
 
+        // Toggle recurring options visibility
+        function toggleRecurring() {
+            const isRecurring = document.getElementById('isRecurring').checked;
+            const recurringOptions = document.getElementById('recurringOptions');
+            recurringOptions.style.display = isRecurring ? 'block' : 'none';
+        }
+
+        // Get selected days of week
+        function getSelectedDays() {
+            const checkboxes = document.querySelectorAll('input[name="recurDays"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value).join(',');
+        }
+
         // Form submission
         document.getElementById('noticeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -571,6 +683,12 @@
             const priority = document.getElementById('priority').value;
             const startTime = document.getElementById('startTime').value;
             const endTime = document.getElementById('endTime').value;
+
+            // Recurring schedule options
+            const isRecurring = document.getElementById('isRecurring').checked;
+            const dailyStartTime = document.getElementById('dailyStartTime').value;
+            const dailyEndTime = document.getElementById('dailyEndTime').value;
+            const recurringDays = getSelectedDays();
 
             // Get target boards
             let targetBoards;
@@ -589,7 +707,11 @@
                     priority,
                     startTime: new Date(startTime).toISOString(),
                     endTime: endTime ? new Date(endTime).toISOString() : '',
-                    targetBoards
+                    targetBoards,
+                    isRecurring,
+                    dailyStartTime: isRecurring ? dailyStartTime : '',
+                    dailyEndTime: isRecurring ? dailyEndTime : '',
+                    recurringDays: isRecurring ? recurringDays : ''
                 });
 
                 if (result.success) {
