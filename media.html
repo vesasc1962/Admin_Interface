@@ -243,19 +243,41 @@
                     tbody.innerHTML = media.map(m => {
                         const isImage = m.type === 'image' || m.pathOrUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
                         const isVideo = m.type === 'video' || m.pathOrUrl.match(/\.(mp4|webm|ogg|mov)$/i);
+                        const isYouTube = m.type === 'youtube' || m.pathOrUrl.includes('youtube.com') || m.pathOrUrl.includes('youtu.be');
                         const fullUrl = m.pathOrUrl.startsWith('/') ? config.SERVER_URL + m.pathOrUrl : m.pathOrUrl;
+
+                        // Get YouTube thumbnail for preview
+                        let youtubeThumb = '';
+                        if (isYouTube) {
+                            const ytMatch = m.pathOrUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                            if (ytMatch) {
+                                youtubeThumb = `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`;
+                            }
+                        }
+
+                        let previewHtml = '';
+                        if (isYouTube && youtubeThumb) {
+                            previewHtml = `<div class="media-preview" style="position:relative;display:flex;align-items:center;justify-content:center;">
+                                <img src="${youtubeThumb}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="YouTube">
+                                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;background:rgba(255,0,0,0.85);border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="9.5,7.5 16.5,12 9.5,16.5"/></svg>
+                                </div>
+                            </div>`;
+                        } else if (isImage) {
+                            previewHtml = `<img src="${fullUrl}" class="media-preview" alt="Preview">`;
+                        } else if (isVideo) {
+                            previewHtml = `<video src="${fullUrl}" class="media-preview" muted></video>`;
+                        } else {
+                            previewHtml = `<div class="media-preview" style="display:flex;align-items:center;justify-content:center;">📄</div>`;
+                        }
+
+                        // Escape URL for onclick (handle special chars in URLs)
+                        const escapedUrl = fullUrl.replace(/'/g, "\\'");
 
                         return `
                             <tr>
-                                <td>
-                                    ${isImage ?
-                                `<img src="${fullUrl}" class="media-preview" alt="Preview">` :
-                                isVideo ?
-                                    `<video src="${fullUrl}" class="media-preview" muted></video>` :
-                                    `<div class="media-preview" style="display:flex;align-items:center;justify-content:center;">📄</div>`
-                            }
-                                </td>
-                                <td><span class="badge badge-normal">${m.type || 'file'}</span></td>
+                                <td>${previewHtml}</td>
+                                <td><span class="badge badge-${isYouTube ? 'warning' : 'normal'}">${isYouTube ? 'youtube' : (m.type || 'file')}</span></td>
                                 <td>
                                     <a href="${fullUrl}" target="_blank" style="color: var(--primary); word-break: break-all; font-size: 0.85rem;">
                                         ${m.pathOrUrl.length > 40 ? m.pathOrUrl.substring(0, 40) + '...' : m.pathOrUrl}
@@ -272,7 +294,7 @@
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <button class="btn btn-success btn-sm" onclick="openPublishModal('${m.mediaId}', '${fullUrl}', '${m.type}')">
+                                        <button class="btn btn-success btn-sm" onclick="openPublishModal('${m.mediaId}', '${escapedUrl}', '${m.type}')">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
                                             </svg>
@@ -309,7 +331,16 @@
 
             // Show preview
             const preview = document.getElementById('publishPreview');
-            if (type === 'video' || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+            // Detect YouTube
+            const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            if (ytMatch || type === 'youtube') {
+                const videoId = ytMatch ? ytMatch[1] : '';
+                if (videoId) {
+                    preview.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0" class="media-preview-lg" style="width:100%;height:300px;border:none;border-radius:8px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                } else {
+                    preview.innerHTML = `<div style="padding:2rem;text-align:center;background:#1f2937;border-radius:8px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF0000" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg><p style="color:#aaa;margin-top:0.5rem;">YouTube Video</p></div>`;
+                }
+            } else if (type === 'video' || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
                 preview.innerHTML = `<video src="${url}" class="media-preview-lg" controls></video>`;
             } else {
                 preview.innerHTML = `<img src="${url}" class="media-preview-lg" alt="Preview">`;
