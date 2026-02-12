@@ -514,6 +514,8 @@
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById('startTime').value = now.toISOString().slice(0, 16);
+            const oneHourLater = new Date(now.getTime() + (60 * 60 * 1000));
+            document.getElementById('endTime').value = oneHourLater.toISOString().slice(0, 16);
         }
 
         // Load boards for selection
@@ -609,9 +611,37 @@
 
             if (step === 3) {
                 const startTime = document.getElementById('startTime').value;
+                const endTime = document.getElementById('endTime').value;
                 if (!startTime) {
                     showToast('Please select a start time', 'error');
                     return false;
+                }
+
+                if (!endTime) {
+                    showToast('Please select an end time', 'error');
+                    return false;
+                }
+
+                if (new Date(endTime) <= new Date(startTime)) {
+                    showToast('End time must be after start time', 'error');
+                    return false;
+                }
+
+                const isRecurring = document.getElementById('isRecurring').checked;
+                if (isRecurring) {
+                    const dailyStartTime = document.getElementById('dailyStartTime').value;
+                    const dailyEndTime = document.getElementById('dailyEndTime').value;
+                    const recurringDays = getSelectedDays();
+
+                    if (!dailyStartTime || !dailyEndTime) {
+                        showToast('Please set daily start and end time for recurring schedule', 'error');
+                        return false;
+                    }
+
+                    if (!recurringDays) {
+                        showToast('Please select at least one recurring day', 'error');
+                        return false;
+                    }
                 }
             }
 
@@ -655,7 +685,7 @@
 
             // Schedule
             let schedule = `Starts: ${formatDate(startTime)}`;
-            if (endTime) schedule += ` | Ends: ${formatDate(endTime)}`;
+            schedule += ` | Ends: ${formatDate(endTime)}`;
             document.getElementById('summarySchedule').textContent = schedule;
 
             updatePreview();
@@ -689,6 +719,28 @@
             const dailyStartTime = document.getElementById('dailyStartTime').value;
             const dailyEndTime = document.getElementById('dailyEndTime').value;
             const recurringDays = getSelectedDays();
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+
+            if (!endTime) {
+                showToast('Please select an end time', 'error');
+                return;
+            }
+
+            if (new Date(endTime) <= new Date(startTime)) {
+                showToast('End time must be after start time', 'error');
+                return;
+            }
+
+            if (isRecurring) {
+                if (!dailyStartTime || !dailyEndTime) {
+                    showToast('Please set daily start and end time for recurring schedule', 'error');
+                    return;
+                }
+                if (!recurringDays) {
+                    showToast('Please select at least one recurring day', 'error');
+                    return;
+                }
+            }
 
             // Get target boards
             let targetBoards;
@@ -706,12 +758,14 @@
                     content,
                     priority,
                     startTime: new Date(startTime).toISOString(),
-                    endTime: endTime ? new Date(endTime).toISOString() : '',
+                    endTime: new Date(endTime).toISOString(),
                     targetBoards,
+                    moduleType: 'marquee',
                     isRecurring,
                     dailyStartTime: isRecurring ? dailyStartTime : '',
                     dailyEndTime: isRecurring ? dailyEndTime : '',
-                    recurringDays: isRecurring ? recurringDays : ''
+                    recurringDays: isRecurring ? recurringDays : '',
+                    timezone
                 });
 
                 if (result.success) {

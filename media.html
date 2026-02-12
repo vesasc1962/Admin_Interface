@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media Library - Smart Board Admin</title>
-    <link rel="stylesheet" href="css/style.css">`r`n
+    <link rel="stylesheet" href="css/style.css">
     <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
 </head>
 
@@ -153,6 +153,57 @@
                     </table>
                 </div>
             </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Media Scheduling</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="loadMediaSchedules()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="23,4 23,10 17,10" />
+                            <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <div class="grid-3 mb-4">
+                    <div class="stat-card">
+                        <small class="text-gray">Currently Playing</small>
+                        <h4 id="currentMediaSchedule">None</h4>
+                    </div>
+                    <div class="stat-card">
+                        <small class="text-gray">Upcoming</small>
+                        <h4 id="upcomingMediaCount">0</h4>
+                    </div>
+                    <div class="stat-card">
+                        <small class="text-gray">Expired</small>
+                        <h4 id="expiredMediaCount">0</h4>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Boards</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mediaSchedulesTable">
+                            <tr>
+                                <td colspan="6">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -197,6 +248,41 @@
                     </div>
                 </div>
 
+                <div class="form-group mt-3">
+                    <label style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="checkbox" id="publishRecurring" onchange="toggleMediaRecurring()">
+                        Daily Recurring Schedule
+                    </label>
+                    <small class="text-gray">Enable for daily time-window playback within the start/end date range</small>
+                </div>
+
+                <div id="mediaRecurringOptions"
+                    style="display:none; margin-top: 0.5rem; padding:1rem; border:1px solid var(--gray-light); border-radius:8px;">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="publishDailyStartTime">Daily Start Time *</label>
+                            <input type="time" id="publishDailyStartTime" value="09:00">
+                        </div>
+                        <div class="form-group">
+                            <label for="publishDailyEndTime">Daily End Time *</label>
+                            <input type="time" id="publishDailyEndTime" value="17:00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Days of Week</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                            <label><input type="checkbox" name="mediaRecurDays" value="0"> Sun</label>
+                            <label><input type="checkbox" name="mediaRecurDays" value="1" checked> Mon</label>
+                            <label><input type="checkbox" name="mediaRecurDays" value="2" checked> Tue</label>
+                            <label><input type="checkbox" name="mediaRecurDays" value="3" checked> Wed</label>
+                            <label><input type="checkbox" name="mediaRecurDays" value="4" checked> Thu</label>
+                            <label><input type="checkbox" name="mediaRecurDays" value="5" checked> Fri</label>
+                            <label><input type="checkbox" name="mediaRecurDays" value="6"> Sat</label>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                     <button type="button" class="btn btn-secondary" onclick="closePublishModal()">Cancel</button>
                     <button type="submit" class="btn btn-success">
@@ -214,9 +300,59 @@
 
     <script src="js/config.js?v=20260211"></script>
     <script src="js/api.js"></script>
-    <script>
+        <script>
         let allBoards = [];
         let selectedMediaForPublish = null;
+        let mediaSchedules = [];
+
+        connectWebSocket();
+        addWSListener((data) => {
+            if (!data || !data.type) return;
+            if (data.type.includes('notice')) {
+                loadMediaSchedules();
+            }
+            if (data.type.includes('media')) {
+                loadMedia();
+            }
+        });
+
+        function extractYouTubeId(url) {
+            try {
+                const parsed = new URL(url);
+                const host = parsed.hostname.toLowerCase();
+
+                if (host.includes('youtu.be')) {
+                    const shortId = parsed.pathname.split('/').filter(Boolean)[0];
+                    if (shortId && shortId.length === 11) return shortId;
+                }
+
+                if (host.includes('youtube.com')) {
+                    const queryId = parsed.searchParams.get('v');
+                    if (queryId && queryId.length === 11) return queryId;
+
+                    const segments = parsed.pathname.split('/').filter(Boolean);
+                    if (segments.length >= 2 && ['embed', 'v', 'shorts', 'live'].includes(segments[0])) {
+                        const pathId = segments[1];
+                        if (pathId && pathId.length === 11) return pathId;
+                    }
+                }
+            } catch (error) {
+                // Ignore URL parser errors and fall back to regex.
+            }
+
+            const match = String(url).match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+            return match ? match[1] : '';
+        }
+
+        function getSelectedMediaRecurringDays() {
+            const checked = document.querySelectorAll('input[name="mediaRecurDays"]:checked');
+            return Array.from(checked).map((cb) => cb.value).join(',');
+        }
+
+        function toggleMediaRecurring() {
+            const recurring = document.getElementById('publishRecurring').checked;
+            document.getElementById('mediaRecurringOptions').style.display = recurring ? 'block' : 'none';
+        }
 
         async function loadMedia() {
             try {
@@ -239,81 +375,168 @@
                             </td>
                         </tr>
                     `;
-                } else {
-                    tbody.innerHTML = media.map(m => {
-                        const isImage = m.type === 'image' || m.pathOrUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                        const isVideo = m.type === 'video' || m.pathOrUrl.match(/\.(mp4|webm|ogg|mov)$/i);
-                        const isYouTube = m.type === 'youtube' || m.pathOrUrl.includes('youtube.com') || m.pathOrUrl.includes('youtu.be');
-                        const fullUrl = m.pathOrUrl.startsWith('/') ? config.SERVER_URL + m.pathOrUrl : m.pathOrUrl;
-
-                        // Get YouTube thumbnail for preview
-                        let youtubeThumb = '';
-                        if (isYouTube) {
-                            const ytMatch = m.pathOrUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-                            if (ytMatch) {
-                                youtubeThumb = `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`;
-                            }
-                        }
-
-                        let previewHtml = '';
-                        if (isYouTube && youtubeThumb) {
-                            previewHtml = `<div class="media-preview" style="position:relative;display:flex;align-items:center;justify-content:center;">
-                                <img src="${youtubeThumb}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="YouTube">
-                                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;background:rgba(255,0,0,0.85);border-radius:6px;display:flex;align-items:center;justify-content:center;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="9.5,7.5 16.5,12 9.5,16.5"/></svg>
-                                </div>
-                            </div>`;
-                        } else if (isImage) {
-                            previewHtml = `<img src="${fullUrl}" class="media-preview" alt="Preview">`;
-                        } else if (isVideo) {
-                            previewHtml = `<video src="${fullUrl}" class="media-preview" muted></video>`;
-                        } else {
-                            previewHtml = `<div class="media-preview" style="display:flex;align-items:center;justify-content:center;">📄</div>`;
-                        }
-
-                        // Escape URL for onclick (handle special chars in URLs)
-                        const escapedUrl = fullUrl.replace(/'/g, "\\'");
-
-                        return `
-                            <tr>
-                                <td>${previewHtml}</td>
-                                <td><span class="badge badge-${isYouTube ? 'warning' : 'normal'}">${isYouTube ? 'youtube' : (m.type || 'file')}</span></td>
-                                <td>
-                                    <a href="${fullUrl}" target="_blank" style="color: var(--primary); word-break: break-all; font-size: 0.85rem;">
-                                        ${m.pathOrUrl.length > 40 ? m.pathOrUrl.substring(0, 40) + '...' : m.pathOrUrl}
-                                    </a>
-                                </td>
-                                <td style="font-size: 0.85rem;">${formatDate(m.uploadedAt)}</td>
-                                <td>
-                                    <span class="publish-status unpublished">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <circle cx="12" cy="12" r="10"/>
-                                        </svg>
-                                        Ready
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="btn btn-success btn-sm" onclick="openPublishModal('${m.mediaId}', '${escapedUrl}', '${m.type}')">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
-                                            </svg>
-                                            Publish
-                                        </button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteMedia('${m.mediaId}')">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('');
+                    return;
                 }
+
+                tbody.innerHTML = media.map((m) => {
+                    const isImage = m.type === 'image' || m.pathOrUrl.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
+                    const isVideo = m.type === 'video' || m.pathOrUrl.match(/\.(mp4|webm|ogg|mov|mkv)(\?.*)?$/i);
+                    const isYouTube = m.type === 'youtube' || m.pathOrUrl.includes('youtube.com') || m.pathOrUrl.includes('youtu.be');
+                    const fullUrl = m.pathOrUrl.startsWith('/') ? config.SERVER_URL + m.pathOrUrl : m.pathOrUrl;
+
+                    let youtubeThumb = '';
+                    if (isYouTube) {
+                        const ytId = extractYouTubeId(m.pathOrUrl);
+                        if (ytId) {
+                            youtubeThumb = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+                        }
+                    }
+
+                    let previewHtml = '';
+                    if (isYouTube && youtubeThumb) {
+                        previewHtml = `<div class="media-preview" style="position:relative;display:flex;align-items:center;justify-content:center;">
+                            <img src="${youtubeThumb}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="YouTube">
+                            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;background:rgba(255,0,0,0.85);border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="9.5,7.5 16.5,12 9.5,16.5"/></svg>
+                            </div>
+                        </div>`;
+                    } else if (isImage) {
+                        previewHtml = `<img src="${fullUrl}" class="media-preview" alt="Preview">`;
+                    } else if (isVideo) {
+                        previewHtml = `<video src="${fullUrl}" class="media-preview" muted></video>`;
+                    } else {
+                        previewHtml = `<div class="media-preview" style="display:flex;align-items:center;justify-content:center;">URL</div>`;
+                    }
+
+                    const escapedUrl = fullUrl.replace(/'/g, "\\'");
+
+                    return `
+                        <tr>
+                            <td>${previewHtml}</td>
+                            <td><span class="badge badge-${isYouTube ? 'warning' : 'normal'}">${isYouTube ? 'youtube' : (m.type || 'file')}</span></td>
+                            <td>
+                                <a href="${fullUrl}" target="_blank" style="color: var(--primary); word-break: break-all; font-size: 0.85rem;">
+                                    ${m.pathOrUrl.length > 40 ? m.pathOrUrl.substring(0, 40) + '...' : m.pathOrUrl}
+                                </a>
+                            </td>
+                            <td style="font-size: 0.85rem;">${formatDate(m.uploadedAt)}</td>
+                            <td>
+                                <span class="publish-status unpublished">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                    </svg>
+                                    Ready
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-success btn-sm" onclick="openPublishModal('${m.mediaId}', '${escapedUrl}', '${m.type}')">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+                                        </svg>
+                                        Publish
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteMedia('${m.mediaId}')">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             } catch (error) {
                 console.error('Load media error:', error);
                 showToast('Failed to load media', 'error');
+            }
+        }
+
+        async function loadMediaSchedules() {
+            try {
+                const result = await api.get('/schedules?moduleType=media');
+                mediaSchedules = result.schedules || [];
+                renderMediaSchedules();
+            } catch (error) {
+                console.error('Load media schedules error:', error);
+                showToast('Failed to load media schedules', 'error');
+            }
+        }
+
+        function renderMediaSchedules() {
+            const tbody = document.getElementById('mediaSchedulesTable');
+            const currentItem = mediaSchedules.find((schedule) => schedule.state === 'active');
+            const upcoming = mediaSchedules.filter((schedule) => schedule.state === 'scheduled');
+            const expired = mediaSchedules.filter((schedule) => schedule.state === 'expired');
+
+            document.getElementById('currentMediaSchedule').textContent = currentItem ? currentItem.title : 'None';
+            document.getElementById('upcomingMediaCount').textContent = String(upcoming.length);
+            document.getElementById('expiredMediaCount').textContent = String(expired.length);
+
+            if (mediaSchedules.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <p>No media schedules yet.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = mediaSchedules.map((schedule) => {
+                const targets = schedule.targetBoards === 'all'
+                    ? 'All Boards'
+                    : `${(schedule.targetBoards || '').split('|').filter(Boolean).length} board(s)`;
+                const enabled = String(schedule.enabled) === 'true' || schedule.enabled === true;
+                const toggleLabel = enabled ? 'Disable' : 'Enable';
+                const toggleClass = enabled ? 'btn-secondary' : 'btn-success';
+
+                return `
+                    <tr>
+                        <td><strong>${schedule.title || 'Media Schedule'}</strong></td>
+                        <td>${targets}</td>
+                        <td>${formatDate(schedule.startTime)}</td>
+                        <td>${formatDate(schedule.endTime)}</td>
+                        <td><span class="badge badge-${schedule.state}">${schedule.state}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn ${toggleClass} btn-sm" onclick="toggleMediaSchedule('${schedule.scheduleId}', ${enabled ? 'false' : 'true'})">${toggleLabel}</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteMediaSchedule('${schedule.scheduleId}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function toggleMediaSchedule(scheduleId, enable) {
+            try {
+                const result = await api.patch(`/schedules/${scheduleId}/toggle`, { enabled: enable });
+                if (result.success) {
+                    showToast(enable ? 'Media schedule enabled' : 'Media schedule disabled');
+                    loadMediaSchedules();
+                } else {
+                    showToast(result.error || 'Failed to update media schedule', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to update media schedule', 'error');
+            }
+        }
+
+        async function deleteMediaSchedule(scheduleId) {
+            if (!confirm('Delete this media schedule?')) return;
+
+            try {
+                const result = await api.delete(`/schedules/${scheduleId}`);
+                if (result.success) {
+                    showToast('Media schedule deleted');
+                    loadMediaSchedules();
+                } else {
+                    showToast(result.error || 'Failed to delete media schedule', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to delete media schedule', 'error');
             }
         }
 
@@ -329,44 +552,49 @@
         function openPublishModal(mediaId, url, type) {
             selectedMediaForPublish = { mediaId, url, type };
 
-            // Show preview
             const preview = document.getElementById('publishPreview');
-            // Detect YouTube
-            const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-            if (ytMatch || type === 'youtube') {
-                const videoId = ytMatch ? ytMatch[1] : '';
-                if (videoId) {
-                    preview.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0" class="media-preview-lg" style="width:100%;height:300px;border:none;border-radius:8px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            const ytId = extractYouTubeId(url);
+            if (ytId || type === 'youtube') {
+                if (ytId) {
+                    preview.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0" class="media-preview-lg" style="width:100%;height:300px;border:none;border-radius:8px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
                 } else {
                     preview.innerHTML = `<div style="padding:2rem;text-align:center;background:#1f2937;border-radius:8px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF0000" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg><p style="color:#aaa;margin-top:0.5rem;">YouTube Video</p></div>`;
                 }
-            } else if (type === 'video' || url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+            } else if (type === 'video' || url.match(/\.(mp4|webm|ogg|mov|mkv)(\?.*)?$/i)) {
                 preview.innerHTML = `<video src="${url}" class="media-preview-lg" controls></video>`;
             } else {
                 preview.innerHTML = `<img src="${url}" class="media-preview-lg" alt="Preview">`;
             }
 
-            // Load boards
             const boardsList = document.getElementById('publishBoardsList');
             if (allBoards.length === 0) {
                 boardsList.innerHTML = '<p class="text-gray">No boards registered yet.</p>';
             } else {
-                boardsList.innerHTML = allBoards.map(b => `
+                boardsList.innerHTML = allBoards.map((board) => `
                     <label class="board-checkbox">
-                        <input type="checkbox" name="boards" value="${b.boardId}">
+                        <input type="checkbox" name="boards" value="${board.boardId}">
                         <div>
-                            <strong>${b.boardId}</strong>
-                            <small style="display:block;color:var(--gray);">Room: ${b.roomNumber}</small>
+                            <strong>${board.boardId}</strong>
+                            <small style="display:block;color:var(--gray);">Room: ${board.roomNumber}</small>
                         </div>
                     </label>
                 `).join('');
             }
 
-            // Set default start time to now
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const oneHourLater = new Date(now.getTime() + (60 * 60 * 1000));
+
             document.getElementById('publishStartTime').value = now.toISOString().slice(0, 16);
-            document.getElementById('publishEndTime').value = '';
+            document.getElementById('publishEndTime').value = oneHourLater.toISOString().slice(0, 16);
+            document.getElementById('selectAllBoards').checked = false;
+            document.getElementById('publishRecurring').checked = false;
+            document.getElementById('publishDailyStartTime').value = '09:00';
+            document.getElementById('publishDailyEndTime').value = '17:00';
+            document.querySelectorAll('input[name="mediaRecurDays"]').forEach((cb) => {
+                cb.checked = ['1', '2', '3', '4', '5'].includes(cb.value);
+            });
+            toggleMediaRecurring();
 
             document.getElementById('publishModal').classList.add('show');
         }
@@ -378,64 +606,82 @@
 
         function toggleAllBoards() {
             const checked = document.getElementById('selectAllBoards').checked;
-            document.querySelectorAll('input[name="boards"]').forEach(cb => {
+            document.querySelectorAll('input[name="boards"]').forEach((cb) => {
                 cb.checked = checked;
                 cb.closest('.board-checkbox').classList.toggle('selected', checked);
             });
         }
 
-        // Handle checkbox UI
-        document.addEventListener('change', (e) => {
-            if (e.target.name === 'boards') {
-                e.target.closest('.board-checkbox').classList.toggle('selected', e.target.checked);
+        document.addEventListener('change', (event) => {
+            if (event.target.name === 'boards') {
+                event.target.closest('.board-checkbox').classList.toggle('selected', event.target.checked);
             }
         });
 
-        // Publish form submit
         document.getElementById('publishForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             if (!selectedMediaForPublish) return;
 
-            const selectedBoards = Array.from(document.querySelectorAll('input[name="boards"]:checked'))
-                .map(cb => cb.value);
-
+            const selectedBoards = Array.from(document.querySelectorAll('input[name="boards"]:checked')).map((cb) => cb.value);
             if (selectedBoards.length === 0) {
                 showToast('Please select at least one board', 'error');
                 return;
             }
 
-            // Get schedule times
             const startTimeInput = document.getElementById('publishStartTime').value;
             const endTimeInput = document.getElementById('publishEndTime').value;
+            const recurring = document.getElementById('publishRecurring').checked;
+            const dailyStart = document.getElementById('publishDailyStartTime').value;
+            const dailyEnd = document.getElementById('publishDailyEndTime').value;
+            const recurringDays = getSelectedMediaRecurringDays();
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
 
-            if (!startTimeInput) {
-                showToast('Please select a start time', 'error');
+            if (!startTimeInput || !endTimeInput) {
+                showToast('Please select start and end time', 'error');
                 return;
             }
 
+            if (new Date(endTimeInput) <= new Date(startTimeInput)) {
+                showToast('End time must be after start time', 'error');
+                return;
+            }
+
+            if (recurring) {
+                if (!dailyStart || !dailyEnd) {
+                    showToast('Please set daily start and end time', 'error');
+                    return;
+                }
+                if (!recurringDays) {
+                    showToast('Please select at least one recurring day', 'error');
+                    return;
+                }
+            }
+
             try {
-                // Create a scheduled notice to push the media
                 const result = await api.post('/notice/create', {
-                    title: 'Scheduled Media Display',
+                    title: 'Media Schedule',
                     content: 'Displaying scheduled media',
                     priority: 'normal',
                     startTime: new Date(startTimeInput).toISOString(),
-                    endTime: endTimeInput ? new Date(endTimeInput).toISOString() : '',
+                    endTime: new Date(endTimeInput).toISOString(),
                     targetBoards: selectedBoards,
                     mediaUrl: selectedMediaForPublish.url,
-                    mediaType: selectedMediaForPublish.type
+                    mediaType: selectedMediaForPublish.type,
+                    moduleType: 'media',
+                    isRecurring: recurring,
+                    dailyStartTime: recurring ? dailyStart : '',
+                    dailyEndTime: recurring ? dailyEnd : '',
+                    recurringDays: recurring ? recurringDays : '',
+                    timezone
                 });
 
                 if (result.success) {
                     const startTime = new Date(startTimeInput);
                     const isNow = startTime <= new Date();
-                    if (isNow) {
-                        showToast('Media published now!', 'success');
-                    } else {
-                        showToast(`Media scheduled for ${startTime.toLocaleString()}`, 'success');
-                    }
+                    showToast(isNow ? 'Media published now!' : `Media scheduled for ${startTime.toLocaleString()}`, 'success');
                     closePublishModal();
+                    loadMediaSchedules();
                 } else {
                     showToast(result.error || 'Failed to publish', 'error');
                 }
@@ -461,7 +707,6 @@
             }
         }
 
-        // File upload via drag & drop
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('file');
 
@@ -508,7 +753,6 @@
             }
         }
 
-        // URL add
         document.getElementById('urlForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const url = document.getElementById('url').value.trim();
@@ -531,10 +775,11 @@
             }
         });
 
-        // Initialize
         loadMedia();
         loadBoards();
+        loadMediaSchedules();
     </script>
 </body>
 
 </html>
+

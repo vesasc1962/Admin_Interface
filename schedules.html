@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Schedules - Smart Board Admin</title>
-    <link rel="stylesheet" href="css/style.css">`r`n
+    <link rel="stylesheet" href="css/style.css">
     <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
 </head>
 
@@ -73,21 +73,35 @@
         <!-- Main -->
         <main class="main">
             <div class="page-header">
-                <h1>Notice Schedules</h1>
-                <p>Manage all active, upcoming, and expired notices</p>
+                <h1>Marquee Schedules</h1>
+                <p>Manage active, inactive, scheduled, and expired marquee notices</p>
             </div>
 
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">All Schedules</h3>
+                    <h3 class="card-title">Marquee Schedule Queue</h3>
                     <div class="action-buttons">
                         <button id="filter-all" class="btn btn-secondary btn-sm" onclick="filter('all')">All</button>
-                        <button id="filter-active" class="btn btn-success btn-sm"
-                            onclick="filter('active')">Active</button>
-                        <button id="filter-upcoming" class="btn btn-secondary btn-sm"
-                            onclick="filter('upcoming')">Upcoming</button>
+                        <button id="filter-active" class="btn btn-success btn-sm" onclick="filter('active')">Active</button>
+                        <button id="filter-scheduled" class="btn btn-secondary btn-sm" onclick="filter('scheduled')">Scheduled</button>
+                        <button id="filter-inactive" class="btn btn-secondary btn-sm" onclick="filter('inactive')">Inactive</button>
                         <button id="filter-expired" class="btn btn-secondary btn-sm"
                             onclick="filter('expired')">Expired</button>
+                    </div>
+                </div>
+
+                <div class="grid-3 mb-4">
+                    <div class="stat-card">
+                        <small class="text-gray">Currently Displaying</small>
+                        <h4 id="currentMarquee">None</h4>
+                    </div>
+                    <div class="stat-card">
+                        <small class="text-gray">Upcoming</small>
+                        <h4 id="upcomingMarqueeCount">0</h4>
+                    </div>
+                    <div class="stat-card">
+                        <small class="text-gray">Expired</small>
+                        <h4 id="expiredMarqueeCount">0</h4>
                     </div>
                 </div>
 
@@ -120,32 +134,40 @@
 
     <script src="js/config.js?v=20260211"></script>
     <script src="js/api.js"></script>
-    <script>
+        <script>
         let schedules = [];
         let currentFilter = 'all';
 
         connectWebSocket();
         addWSListener((data) => {
-            if (data.type.includes('notice')) loadSchedules();
+            if (data && data.type && data.type.includes('notice')) {
+                loadSchedules();
+            }
         });
 
         function getStatus(schedule) {
-            const now = new Date();
-            const start = new Date(schedule.startTime);
-            const end = schedule.endTime ? new Date(schedule.endTime) : null;
+            return String(schedule.state || '').toLowerCase() || 'scheduled';
+        }
 
-            if (now < start) return 'upcoming';
-            if (!end || now <= end) return 'active';
-            return 'expired';
+        function renderSummary() {
+            const current = schedules.find((schedule) => getStatus(schedule) === 'active');
+            const upcoming = schedules.filter((schedule) => getStatus(schedule) === 'scheduled').length;
+            const expired = schedules.filter((schedule) => getStatus(schedule) === 'expired').length;
+
+            document.getElementById('currentMarquee').textContent = current ? current.title : 'None';
+            document.getElementById('upcomingMarqueeCount').textContent = String(upcoming);
+            document.getElementById('expiredMarqueeCount').textContent = String(expired);
         }
 
         async function loadSchedules() {
             try {
-                const result = await api.get('/schedules');
+                const result = await api.get('/schedules?moduleType=marquee');
                 schedules = result.schedules || [];
+                renderSummary();
                 renderSchedules();
             } catch (error) {
                 console.error('Load schedules error:', error);
+                showToast('Failed to load schedules', 'error');
             }
         }
 
@@ -154,7 +176,7 @@
 
             let filtered = schedules;
             if (currentFilter !== 'all') {
-                filtered = schedules.filter(s => getStatus(s) === currentFilter);
+                filtered = schedules.filter((schedule) => getStatus(schedule) === currentFilter);
             }
 
             if (filtered.length === 0) {
@@ -173,45 +195,72 @@
                         </td>
                     </tr>
                 `;
-            } else {
-                tbody.innerHTML = filtered.map(s => {
-                    const status = getStatus(s);
-                    const preview = s.content.length > 40 ? s.content.substring(0, 40) + '...' : s.content;
-                    const targets = s.targetBoards === 'all' ? 'All Boards' : s.targetBoards.split('|').length + ' boards';
-                    const isRecurring = s.isRecurring === 'true';
-                    const recurringInfo = isRecurring ?
-                        `<span class="badge badge-info" title="Daily ${s.dailyStartTime}-${s.dailyEndTime}">🔄 Daily</span>` : '';
+                return;
+            }
 
-                    return `
-                        <tr>
-                            <td><strong>${s.title}</strong> ${recurringInfo}</td>
-                            <td>${preview}</td>
-                            <td><span class="badge badge-${s.priority}">${s.priority}</span></td>
-                            <td>${targets}</td>
-                            <td>${formatDate(s.startTime)}</td>
-                            <td>${s.endTime ? formatDate(s.endTime) : 'No end'}</td>
-                            <td><span class="badge badge-${status}">${status}</span></td>
-                            <td>
-                                <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.scheduleId}')">
+            tbody.innerHTML = filtered.map((schedule) => {
+                const status = getStatus(schedule);
+                const preview = (schedule.content || '').length > 40
+                    ? schedule.content.substring(0, 40) + '...'
+                    : (schedule.content || '');
+                const targets = schedule.targetBoards === 'all'
+                    ? 'All Boards'
+                    : `${(schedule.targetBoards || '').split('|').filter(Boolean).length} boards`;
+                const isRecurring = String(schedule.isRecurring) === 'true' || schedule.isRecurring === true;
+                const recurringInfo = isRecurring
+                    ? `<span class="badge badge-info" title="Daily ${schedule.dailyStartTime}-${schedule.dailyEndTime}">Daily</span>`
+                    : '';
+                const enabled = String(schedule.enabled) === 'true' || schedule.enabled === true;
+                const toggleLabel = enabled ? 'Disable' : 'Enable';
+                const toggleClass = enabled ? 'btn-secondary' : 'btn-success';
+
+                return `
+                    <tr>
+                        <td><strong>${schedule.title}</strong> ${recurringInfo}</td>
+                        <td>${preview}</td>
+                        <td><span class="badge badge-${schedule.priority}">${schedule.priority}</span></td>
+                        <td>${targets}</td>
+                        <td>${formatDate(schedule.startTime)}</td>
+                        <td>${formatDate(schedule.endTime)}</td>
+                        <td><span class="badge badge-${status}">${status}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn ${toggleClass} btn-sm" onclick="toggleSchedule('${schedule.scheduleId}', ${enabled ? 'false' : 'true'})">${toggleLabel}</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${schedule.scheduleId}')">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                                     </svg>
                                     Delete
                                 </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function toggleSchedule(scheduleId, enable) {
+            try {
+                const result = await api.patch(`/schedules/${scheduleId}/toggle`, { enabled: enable });
+                if (result.success) {
+                    showToast(enable ? 'Schedule enabled' : 'Schedule disabled');
+                    loadSchedules();
+                } else {
+                    showToast(result.error || 'Failed to update schedule', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to update schedule', 'error');
             }
         }
 
         function filter(status) {
             currentFilter = status;
 
-            // Update button styles - remove success from all, add to selected
-            const buttons = ['all', 'active', 'upcoming', 'expired'];
-            buttons.forEach(btn => {
+            const buttons = ['all', 'active', 'scheduled', 'inactive', 'expired'];
+            buttons.forEach((btn) => {
                 const el = document.getElementById('filter-' + btn);
+                if (!el) return;
+
                 if (btn === status) {
                     el.classList.remove('btn-secondary');
                     el.classList.add('btn-success');
@@ -241,8 +290,9 @@
         }
 
         loadSchedules();
-        setInterval(loadSchedules, 15000);
+        setInterval(loadSchedules, 10000);
     </script>
 </body>
 
 </html>
+

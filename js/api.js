@@ -34,6 +34,15 @@ const api = {
         return await response.json();
     },
 
+    async patch(endpoint, data) {
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data || {})
+        });
+        return await response.json();
+    },
+
     async upload(endpoint, formData) {
         const response = await fetch(`${API_BASE}${endpoint}`, {
             method: 'POST',
