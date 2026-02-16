@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -7,6 +7,8 @@
     <title>Boards - Smart Board Admin</title>
     <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+    <script src="js/header.js"></script>
 </head>
 
 <body>
@@ -67,6 +69,45 @@
                         </svg></span>
                     Media Library
                 </a>
+                                <a href="templates.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M7 8h10" />
+                            <path d="M7 12h10" />
+                            <path d="M7 16h6" />
+                        </svg></span>
+                    Templates
+                </a><a href="quotes.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M6 10h12" />
+                            <path d="M6 14h8" />
+                            <path d="M8 6h8" />
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg></span>
+                    Quote Library
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg></span>
+                    Analytics
+                </a>
+                <a href="audit-log.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg></span>
+                    Audit Log
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V22a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H22a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                        </svg></span>
+                    Settings
+                </a>
             </nav>
         </aside>
 
@@ -77,17 +118,36 @@
                 <p>All smart boards registered in the system</p>
             </div>
 
+            <!-- Summary Cards (UI Only) -->
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="stat-value" id="boardsTotal">-</div>
+                    <div class="stat-label">Total Boards</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" id="boardsOnline">-</div>
+                    <div class="stat-label">Online Boards</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="boardsOffline">-</div>
+                    <div class="stat-label">Offline Boards</div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">All Boards</h3>
-                    <button class="btn btn-secondary btn-sm" onclick="loadBoards()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polyline points="23,4 23,10 17,10" />
-                            <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
-                        </svg>
-                        Refresh
-                    </button>
+                    <div class="action-buttons">
+                        <input type="search" id="boardSearch" class="search-input" placeholder="Search by Board ID / Room / Username" oninput="setBoardSearch(this.value)">
+                        <button class="btn btn-secondary btn-sm" onclick="loadBoards()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="23,4 23,10 17,10" />
+                                <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
                 </div>
 
                 <table>
@@ -117,51 +177,102 @@
     <script src="js/config.js?v=20260211"></script>
     <script src="js/api.js"></script>
     <script>
+        let boards = [];
+        let boardSearchQuery = '';
+
         connectWebSocket();
         addWSListener((data) => {
             if (data.type.includes('board')) loadBoards();
         });
 
+        function normalizeStatus(status) {
+            const value = String(status || '').toLowerCase();
+            if (value === 'online') return 'active';
+            return value;
+        }
+
+        function setBoardSearch(value) {
+            boardSearchQuery = String(value || '').trim().toLowerCase();
+            renderBoards();
+        }
+
+        function matchesBoard(board) {
+            if (!boardSearchQuery) return true;
+            const boardId = String(board.boardId || '').toLowerCase();
+            const room = String(board.roomNumber || '').toLowerCase();
+            const username = String(board.username || '').toLowerCase();
+            return boardId.includes(boardSearchQuery) || room.includes(boardSearchQuery) || username.includes(boardSearchQuery);
+        }
+
+        function renderSummary() {
+            const total = boards.length;
+            const online = boards.filter((b) => normalizeStatus(b.status) === 'active').length;
+            const offline = total - online;
+
+            document.getElementById('boardsTotal').textContent = String(total);
+            document.getElementById('boardsOnline').textContent = String(online);
+            document.getElementById('boardsOffline').textContent = String(offline);
+        }
+
+        function renderBoards() {
+            renderSummary();
+            const tbody = document.getElementById('boardsTable');
+            const filtered = boards.filter(matchesBoard);
+
+            if (boards.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                </svg>
+                            </div>
+                            <p>No boards registered yet</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <p>No boards match your search.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(board => `
+                <tr>
+                    <td><strong>${board.boardId}</strong></td>
+                    <td>${board.roomNumber}</td>
+                    <td>${board.username}</td>
+                    <td><span class="badge badge-${normalizeStatus(board.status)}">${normalizeStatus(board.status)}</span></td>
+                    <td>${timeSince(board.lastSeen)}</td>
+                    <td>${formatDate(board.registeredAt)}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="removeBoard('${board.boardId}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                            </svg>
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
         async function loadBoards() {
             try {
                 const result = await api.get('/boards');
-                const tbody = document.getElementById('boardsTable');
-
-                if (!result.success || result.boards.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="7" class="empty-state">
-                                <div class="empty-icon">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                                        <line x1="8" y1="21" x2="16" y2="21"/>
-                                        <line x1="12" y1="17" x2="12" y2="21"/>
-                                    </svg>
-                                </div>
-                                <p>No boards registered yet</p>
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    tbody.innerHTML = result.boards.map(board => `
-                        <tr>
-                            <td><strong>${board.boardId}</strong></td>
-                            <td>${board.roomNumber}</td>
-                            <td>${board.username}</td>
-                            <td><span class="badge badge-${board.status}">${board.status}</span></td>
-                            <td>${timeSince(board.lastSeen)}</td>
-                            <td>${formatDate(board.registeredAt)}</td>
-                            <td>
-                                <button class="btn btn-danger btn-sm" onclick="removeBoard('${board.boardId}')">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                                    </svg>
-                                    Remove
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
+                boards = (result && result.success && Array.isArray(result.boards)) ? result.boards : [];
+                renderBoards();
             } catch (error) {
                 console.error('Load boards error:', error);
             }
@@ -184,8 +295,10 @@
         }
 
         loadBoards();
-        setInterval(loadBoards, 15000);
+        setInterval(loadBoards, getAutoRefreshInterval());
     </script>
 </body>
 
 </html>
+
+

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Log - Smart Board Admin</title>
+    <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+    <script src="js/header.js"></script>
+    <style>
+        .audit-tabs {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            border-bottom: 1px solid rgba(107, 114, 128, 0.18);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .audit-tab-btn {
+            border: 1px solid rgba(107, 114, 128, 0.22);
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--gray-700);
+            border-radius: 999px;
+            padding: 0.45rem 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .audit-tab-btn:hover {
+            border-color: rgba(139, 30, 30, 0.5);
+            color: var(--primary);
+        }
+
+        .audit-tab-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+        }
+
+        :root[data-theme="dark"] .audit-tab-btn {
+            background: rgba(26, 31, 40, 0.92);
+            border-color: #3a4861;
+            color: #e6eaf2;
+        }
+
+        :root[data-theme="dark"] .audit-tab-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+        }
+
+        .audit-list {
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        .audit-item {
+            display: flex;
+            gap: 0.9rem;
+            align-items: flex-start;
+            padding: 1rem;
+            border: 1px solid rgba(107, 114, 128, 0.16);
+            border-radius: var(--radius-lg);
+            background: var(--card);
+            box-shadow: var(--shadow);
+        }
+
+        .audit-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            border: 1px solid rgba(107, 114, 128, 0.18);
+            background: rgba(139, 30, 30, 0.10);
+            color: var(--primary);
+        }
+
+        .audit-icon.system {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success);
+        }
+
+        .audit-icon.board {
+            background: rgba(29, 78, 216, 0.10);
+            color: #1d4ed8;
+        }
+
+        .audit-icon.schedule {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--warning);
+        }
+
+        .audit-icon.group {
+            background: rgba(182, 58, 58, 0.12);
+            color: var(--accent);
+        }
+
+        .audit-icon.content {
+            background: rgba(212, 160, 23, 0.14);
+            color: var(--accent-gold-dark);
+        }
+
+        :root[data-theme="dark"] .audit-item {
+            border-color: #2e3647;
+        }
+
+        :root[data-theme="dark"] .audit-icon {
+            border-color: #364156;
+        }
+
+        .audit-title {
+            font-weight: 800;
+            color: var(--dark);
+            line-height: 1.2;
+        }
+
+        .audit-message {
+            color: var(--gray);
+            margin-top: 0.25rem;
+            line-height: 1.35;
+            font-size: 0.92rem;
+        }
+
+        .audit-meta {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 0.55rem;
+            color: var(--gray);
+            font-size: 0.82rem;
+            font-weight: 650;
+        }
+
+        .audit-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid rgba(107, 114, 128, 0.22);
+            background: rgba(245, 246, 248, 0.6);
+        }
+
+        :root[data-theme="dark"] .audit-chip {
+            border-color: #364156;
+            background: rgba(17, 23, 34, 0.6);
+        }
+    </style>
+</head>
+
+<body>
+    <script src="js/auth.js"></script>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="logo/Ves.png" alt="VES Logo" class="logo-img">
+                <span class="logo-text">Smart<span>Board</span></span>
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <polyline points="9,22 9,12 15,12 15,22" />
+                        </svg></span>
+                    Dashboard
+                </a>
+                <a href="boards.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg></span>
+                    Boards
+                </a>
+                <a href="create-notice.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg></span>
+                    Create Notice
+                </a>
+                <a href="groups.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                            <path d="M16 3.13a4 4 0 010 7.75" />
+                        </svg></span>
+                    Groups
+                </a>
+                <a href="schedules.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg></span>
+                    Schedules
+                </a>
+                <a href="media.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21,15 16,10 5,21" />
+                        </svg></span>
+                    Media Library
+                </a>
+                <a href="templates.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M7 8h10" />
+                            <path d="M7 12h10" />
+                            <path d="M7 16h6" />
+                        </svg></span>
+                    Templates
+                </a>
+                <a href="quotes.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M6 10h12" />
+                            <path d="M6 14h8" />
+                            <path d="M8 6h8" />
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg></span>
+                    Quote Library
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg></span>
+                    Analytics
+                </a>
+                <a href="audit-log.html" class="nav-item active">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg></span>
+                    Audit Log
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V22a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H22a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                        </svg></span>
+                    Settings
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <div class="page-header">
+                <h1>Audit Log</h1>
+                <p>Complete system activity trail - who did what and when</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="stat-value" id="auditTotal">0</div>
+                    <div class="stat-label">Total Logs</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" id="auditSystem">0</div>
+                    <div class="stat-label">System Events</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value" id="auditBoards">0</div>
+                    <div class="stat-label">Board Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="auditSchedules">0</div>
+                    <div class="stat-label">Schedule Events</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Activity</h3>
+                    <input type="search" id="auditSearch" class="search-input" placeholder="Search logs (action, user, type, date)" oninput="setAuditSearch(this.value)">
+                </div>
+
+                <div class="audit-tabs" id="auditTabs">
+                    <button type="button" class="audit-tab-btn active" data-tab="all" onclick="setAuditTab('all')">All Activity</button>
+                    <button type="button" class="audit-tab-btn" data-tab="schedule" onclick="setAuditTab('schedule')">Schedules</button>
+                    <button type="button" class="audit-tab-btn" data-tab="board" onclick="setAuditTab('board')">Boards</button>
+                    <button type="button" class="audit-tab-btn" data-tab="group" onclick="setAuditTab('group')">Groups</button>
+                    <button type="button" class="audit-tab-btn" data-tab="system" onclick="setAuditTab('system')">System</button>
+                    <button type="button" class="audit-tab-btn" data-tab="content" onclick="setAuditTab('content')">Content</button>
+                </div>
+
+                <div id="auditList" class="audit-list">
+                    <div class="empty-state">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js?v=20260211"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let auditTab = 'all';
+        let auditQuery = '';
+        let auditLogs = [];
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function toLocalTime(value) {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+            return date.toLocaleString();
+        }
+
+        function normalizeType(value) {
+            const raw = String(value || '').toLowerCase();
+            if (['system', 'board', 'schedule', 'group', 'content'].includes(raw)) return raw;
+            return 'system';
+        }
+
+        function setAuditTab(tab) {
+            auditTab = tab;
+            document.querySelectorAll('.audit-tab-btn').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            renderAuditList();
+        }
+
+        function setAuditSearch(value) {
+            auditQuery = String(value || '').trim().toLowerCase();
+            renderAuditList();
+        }
+
+        function renderSummary() {
+            const total = auditLogs.length;
+            const systemCount = auditLogs.filter((l) => normalizeType(l.type) === 'system').length;
+            const boardCount = auditLogs.filter((l) => normalizeType(l.type) === 'board').length;
+            const scheduleCount = auditLogs.filter((l) => normalizeType(l.type) === 'schedule').length;
+
+            document.getElementById('auditTotal').textContent = String(total);
+            document.getElementById('auditSystem').textContent = String(systemCount);
+            document.getElementById('auditBoards').textContent = String(boardCount);
+            document.getElementById('auditSchedules').textContent = String(scheduleCount);
+        }
+
+        function matchesSearch(log) {
+            if (!auditQuery) return true;
+            const haystack = [
+                log.action,
+                log.message,
+                log.user,
+                log.type,
+                toLocalTime(log.timestamp),
+                log.timestamp
+            ].map((v) => String(v || '').toLowerCase()).join(' ');
+            return haystack.includes(auditQuery);
+        }
+
+        function getVisibleLogs() {
+            let filtered = auditLogs;
+            if (auditTab !== 'all') {
+                filtered = filtered.filter((log) => normalizeType(log.type) === auditTab);
+            }
+            filtered = filtered.filter(matchesSearch);
+            return filtered;
+        }
+
+        function iconSvg(type) {
+            const t = normalizeType(type);
+            if (t === 'board') {
+                return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 18v3"/></svg>';
+            }
+            if (t === 'schedule') {
+                return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>';
+            }
+            if (t === 'group') {
+                return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
+            }
+            if (t === 'content') {
+                return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 10h8"/><path d="M8 14h6"/></svg>';
+            }
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>';
+        }
+
+        function renderAuditList() {
+            const container = document.getElementById('auditList');
+            const visible = getVisibleLogs();
+
+            if (visible.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No logs found for the selected filter.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = visible.map((log) => {
+                const type = normalizeType(log.type);
+                const action = escapeHtml(log.action);
+                const message = escapeHtml(log.message || '');
+                const user = escapeHtml(log.user || 'Admin');
+                const time = escapeHtml(toLocalTime(log.timestamp) || '');
+                const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+
+                return `
+                    <div class="audit-item">
+                        <div class="audit-icon ${type}">
+                            ${iconSvg(type)}
+                        </div>
+                        <div style="min-width:0;">
+                            <div class="audit-title">${action}</div>
+                            ${message ? `<div class="audit-message">${message}</div>` : ''}
+                            <div class="audit-meta">
+                                <span class="audit-chip">User: ${user}</span>
+                                <span class="audit-chip">${time}</span>
+                                <span class="audit-chip">Type: ${typeLabel}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function loadAuditLogs() {
+            if (!window.auditStore || typeof window.auditStore.getLogs !== 'function') {
+                auditLogs = [];
+                renderSummary();
+                document.getElementById('auditList').innerHTML = `
+                    <div class="empty-state">
+                        <p>Audit log storage is not available.</p>
+                    </div>
+                `;
+                return;
+            }
+            auditLogs = window.auditStore.getLogs();
+            renderSummary();
+            renderAuditList();
+        }
+
+        connectWebSocket();
+        addWSListener(() => loadAuditLogs());
+
+        loadAuditLogs();
+        setInterval(loadAuditLogs, 5000);
+    </script>
+</body>
+
+</html>
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -7,6 +7,8 @@
     <title>Create Notice - Smart Board Admin</title>
     <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+    <script src="js/header.js"></script>
     <style>
         .form-steps {
             display: flex;
@@ -153,19 +155,22 @@
             align-items: center;
             gap: 0.25rem;
             padding: 0.5rem 0.75rem;
-            background: var(--gray-700);
-            border-radius: 6px;
+            background: #eef1f5;
+            border: 1px solid rgba(107, 114, 128, 0.2);
+            border-radius: 8px;
             cursor: pointer;
             font-size: 0.875rem;
+            color: var(--gray-700);
             transition: all 0.2s;
         }
 
         .day-checkbox:hover {
-            background: var(--gray-600);
+            background: #e5e9ef;
         }
 
         .day-checkbox:has(input:checked) {
             background: var(--primary);
+            border-color: var(--primary);
             color: white;
         }
 
@@ -184,6 +189,35 @@
 
         .checkbox-label input {
             width: auto;
+        }
+
+        .recurring-panel {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--card);
+            border: 1px solid rgba(107, 114, 128, 0.2);
+            border-radius: var(--radius-lg);
+        }
+
+        :root[data-theme="dark"] .day-checkbox {
+            background: #253045;
+            border-color: #3a4861;
+            color: #d7deea;
+        }
+
+        :root[data-theme="dark"] .day-checkbox:hover {
+            background: #31425f;
+        }
+
+        :root[data-theme="dark"] .day-checkbox:has(input:checked) {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+        }
+
+        :root[data-theme="dark"] .recurring-panel {
+            border-color: #364156;
         }
     </style>
 </head>
@@ -246,14 +280,68 @@
                         </svg></span>
                     Media Library
                 </a>
+                <a href="templates.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M7 8h10" />
+                            <path d="M7 12h10" />
+                            <path d="M7 16h6" />
+                        </svg></span>
+                    Templates
+                </a>
+                <a href="quotes.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M6 10h12" />
+                            <path d="M6 14h8" />
+                            <path d="M8 6h8" />
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg></span>
+                    Quote Library
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg></span>
+                    Analytics
+                </a>
+                <a href="audit-log.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg></span>
+                    Audit Log
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V22a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H22a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                        </svg></span>
+                    Settings
+                </a>
             </nav>
         </aside>
 
         <!-- Main -->
         <main class="main">
             <div class="page-header">
-                <h1>Create Notice</h1>
-                <p>Design and publish a new notice for your smart boards</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+                    <div>
+                        <h1>Create Notice</h1>
+                        <p>Design and publish a new notice for your smart boards</p>
+                    </div>
+                    <a href="templates.html" class="btn btn-secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M7 8h10" />
+                            <path d="M7 12h10" />
+                            <path d="M7 16h6" />
+                        </svg>
+                        Browse Templates
+                    </a>
+                </div>
             </div>
 
             <!-- Step Indicator -->
@@ -359,6 +447,11 @@
                     <div class="form-step" data-step="3" style="display: none;">
                         <h3 class="mb-4">Step 3: Schedule</h3>
 
+                        <div class="form-group">
+                            <label style="font-weight: 600;">Overall Active Window *</label>
+                            <small class="text-gray">Set the full date-time window when this notice is eligible to run.</small>
+                        </div>
+
                         <div class="grid-2">
                             <div class="form-group">
                                 <label for="startTime">Start Date & Time *</label>
@@ -376,13 +469,26 @@
                         <div class="form-group mt-4">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="isRecurring" onchange="toggleRecurring()">
-                                <span>🔄 Daily Recurring Schedule</span>
+                                <span>Enable Daily Recurring Schedule</span>
                             </label>
-                            <small class="text-gray">Enable to show this notice every day during specific hours</small>
+                            <small class="text-gray">Use this for date range + daily time window + selected weekdays.</small>
                         </div>
 
-                        <div id="recurringOptions"
-                            style="display: none; margin-top: 1rem; padding: 1rem; background: var(--gray-800); border-radius: 8px;">
+                        <div id="recurringOptions" class="recurring-panel">
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label for="recurringStartDate">Recurring From Date *</label>
+                                    <input type="date" id="recurringStartDate">
+                                    <small class="text-gray">First day for recurring display</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="recurringEndDate">Recurring To Date *</label>
+                                    <input type="date" id="recurringEndDate">
+                                    <small class="text-gray">Last day for recurring display</small>
+                                </div>
+                            </div>
+
                             <div class="grid-2">
                                 <div class="form-group">
                                     <label for="dailyStartTime">Daily Start Time *</label>
@@ -499,11 +605,38 @@
     </div>
 
     <script src="js/config.js?v=20260211"></script>
+    <script src="js/templates.js"></script>
     <script src="js/api.js"></script>
     <script>
         let currentStep = 1;
         let boards = [];
         let groups = [];
+
+        function applyTemplateFromQuery() {
+            const templateId = new URLSearchParams(window.location.search).get('template');
+            const langParam = String(new URLSearchParams(window.location.search).get('lang') || 'en').toLowerCase();
+            const selectedLang = ['en', 'hi', 'mr'].includes(langParam) ? langParam : 'en';
+            if (!templateId) return;
+
+            const store = window.noticeTemplateStore;
+            if (!store || typeof store.getTemplateById !== 'function') return;
+
+            const template = store.getTemplateById(templateId);
+            if (!template) return;
+
+            const tx = selectedLang !== 'en' && template.translations && template.translations[selectedLang]
+                ? template.translations[selectedLang]
+                : null;
+
+            document.getElementById('title').value = (tx && tx.title) ? tx.title : (template.title || template.name || '');
+            document.getElementById('content').value = (tx && tx.content) ? tx.content : (template.content || '');
+            document.getElementById('priority').value = template.priority === 'emergency' ? 'emergency' : 'normal';
+            currentStep = 1;
+            updateStepUI();
+            updatePreview();
+            showToast(`Template "${template.name}" loaded`, 'success');
+            window.history.replaceState({}, document.title, 'create-notice.html');
+        }
 
         // Initialize
         async function init() {
@@ -516,6 +649,9 @@
             document.getElementById('startTime').value = now.toISOString().slice(0, 16);
             const oneHourLater = new Date(now.getTime() + (60 * 60 * 1000));
             document.getElementById('endTime').value = oneHourLater.toISOString().slice(0, 16);
+            document.getElementById('recurringStartDate').value = now.toISOString().slice(0, 10);
+            document.getElementById('recurringEndDate').value = oneHourLater.toISOString().slice(0, 10);
+            applyTemplateFromQuery();
         }
 
         // Load boards for selection
@@ -612,27 +748,25 @@
             if (step === 3) {
                 const startTime = document.getElementById('startTime').value;
                 const endTime = document.getElementById('endTime').value;
-                if (!startTime) {
-                    showToast('Please select a start time', 'error');
-                    return false;
-                }
-
-                if (!endTime) {
-                    showToast('Please select an end time', 'error');
-                    return false;
-                }
-
-                if (new Date(endTime) <= new Date(startTime)) {
-                    showToast('End time must be after start time', 'error');
-                    return false;
-                }
-
                 const isRecurring = document.getElementById('isRecurring').checked;
+                let effectiveStartTime = startTime;
+                let effectiveEndTime = endTime;
+
                 if (isRecurring) {
+                    const recurringStartDate = document.getElementById('recurringStartDate').value;
+                    const recurringEndDate = document.getElementById('recurringEndDate').value;
                     const dailyStartTime = document.getElementById('dailyStartTime').value;
                     const dailyEndTime = document.getElementById('dailyEndTime').value;
                     const recurringDays = getSelectedDays();
 
+                    if (!recurringStartDate || !recurringEndDate) {
+                        showToast('Please select recurring from and to dates', 'error');
+                        return false;
+                    }
+                    if (new Date(recurringEndDate) < new Date(recurringStartDate)) {
+                        showToast('Recurring To Date must be on or after From Date', 'error');
+                        return false;
+                    }
                     if (!dailyStartTime || !dailyEndTime) {
                         showToast('Please set daily start and end time for recurring schedule', 'error');
                         return false;
@@ -642,6 +776,26 @@
                         showToast('Please select at least one recurring day', 'error');
                         return false;
                     }
+
+                    effectiveStartTime = combineLocalDateTime(recurringStartDate, dailyStartTime);
+                    effectiveEndTime = combineLocalDateTime(recurringEndDate, dailyEndTime);
+                    document.getElementById('startTime').value = effectiveStartTime;
+                    document.getElementById('endTime').value = effectiveEndTime;
+                }
+
+                if (!effectiveStartTime) {
+                    showToast('Please select a start time', 'error');
+                    return false;
+                }
+
+                if (!effectiveEndTime) {
+                    showToast('Please select an end time', 'error');
+                    return false;
+                }
+
+                if (new Date(effectiveEndTime) <= new Date(effectiveStartTime)) {
+                    showToast('End time must be after start time', 'error');
+                    return false;
                 }
             }
 
@@ -671,6 +825,12 @@
             const priority = document.getElementById('priority').value;
             const startTime = document.getElementById('startTime').value;
             const endTime = document.getElementById('endTime').value;
+            const isRecurring = document.getElementById('isRecurring').checked;
+            const recurringStartDate = document.getElementById('recurringStartDate').value;
+            const recurringEndDate = document.getElementById('recurringEndDate').value;
+            const dailyStartTime = document.getElementById('dailyStartTime').value;
+            const dailyEndTime = document.getElementById('dailyEndTime').value;
+            const recurringDays = getSelectedDays();
 
             document.getElementById('summaryTitle').textContent = title;
             document.getElementById('summaryContent').textContent = content;
@@ -686,6 +846,16 @@
             // Schedule
             let schedule = `Starts: ${formatDate(startTime)}`;
             schedule += ` | Ends: ${formatDate(endTime)}`;
+            if (isRecurring) {
+                const recurringRange = recurringStartDate && recurringEndDate
+                    ? `${formatDate(recurringStartDate)} to ${formatDate(recurringEndDate)}`
+                    : 'Not set';
+                const dailyWindow = (dailyStartTime && dailyEndTime)
+                    ? `${dailyStartTime} - ${dailyEndTime}`
+                    : 'Not set';
+                const dayLabel = formatRecurringDays(recurringDays);
+                schedule += ` | Recurring: ${recurringRange}, Daily ${dailyWindow}, Days: ${dayLabel}`;
+            }
             document.getElementById('summarySchedule').textContent = schedule;
 
             updatePreview();
@@ -696,12 +866,60 @@
             const isRecurring = document.getElementById('isRecurring').checked;
             const recurringOptions = document.getElementById('recurringOptions');
             recurringOptions.style.display = isRecurring ? 'block' : 'none';
+
+            if (isRecurring) {
+                const startTime = document.getElementById('startTime').value;
+                const endTime = document.getElementById('endTime').value;
+                const recurringStartInput = document.getElementById('recurringStartDate');
+                const recurringEndInput = document.getElementById('recurringEndDate');
+                if (!recurringStartInput.value && startTime) {
+                    recurringStartInput.value = startTime.slice(0, 10);
+                }
+                if (!recurringEndInput.value && endTime) {
+                    recurringEndInput.value = endTime.slice(0, 10);
+                }
+                syncNoticeWindowFromRecurring();
+            }
         }
 
         // Get selected days of week
         function getSelectedDays() {
             const checkboxes = document.querySelectorAll('input[name="recurDays"]:checked');
             return Array.from(checkboxes).map(cb => cb.value).join(',');
+        }
+
+        function formatRecurringDays(recurringDays) {
+            if (!recurringDays) return 'None';
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            return recurringDays
+                .split(',')
+                .map((day) => dayNames[Number(day)])
+                .filter(Boolean)
+                .join(', ');
+        }
+
+        function combineLocalDateTime(dateValue, timeValue) {
+            if (!dateValue || !timeValue) return '';
+            return `${dateValue}T${timeValue}`;
+        }
+
+        function syncNoticeWindowFromRecurring() {
+            const isRecurring = document.getElementById('isRecurring').checked;
+            if (!isRecurring) return;
+
+            const recurringStartDate = document.getElementById('recurringStartDate').value;
+            const recurringEndDate = document.getElementById('recurringEndDate').value;
+            const dailyStartTime = document.getElementById('dailyStartTime').value;
+            const dailyEndTime = document.getElementById('dailyEndTime').value;
+
+            const syncedStart = combineLocalDateTime(recurringStartDate, dailyStartTime);
+            const syncedEnd = combineLocalDateTime(recurringEndDate, dailyEndTime);
+            if (syncedStart) {
+                document.getElementById('startTime').value = syncedStart;
+            }
+            if (syncedEnd) {
+                document.getElementById('endTime').value = syncedEnd;
+            }
         }
 
         // Form submission
@@ -716,22 +934,25 @@
 
             // Recurring schedule options
             const isRecurring = document.getElementById('isRecurring').checked;
+            const recurringStartDate = document.getElementById('recurringStartDate').value;
+            const recurringEndDate = document.getElementById('recurringEndDate').value;
             const dailyStartTime = document.getElementById('dailyStartTime').value;
             const dailyEndTime = document.getElementById('dailyEndTime').value;
             const recurringDays = getSelectedDays();
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
 
-            if (!endTime) {
-                showToast('Please select an end time', 'error');
-                return;
-            }
-
-            if (new Date(endTime) <= new Date(startTime)) {
-                showToast('End time must be after start time', 'error');
-                return;
-            }
+            let effectiveStartTime = startTime;
+            let effectiveEndTime = endTime;
 
             if (isRecurring) {
+                if (!recurringStartDate || !recurringEndDate) {
+                    showToast('Please select recurring from and to dates', 'error');
+                    return;
+                }
+                if (new Date(recurringEndDate) < new Date(recurringStartDate)) {
+                    showToast('Recurring To Date must be on or after From Date', 'error');
+                    return;
+                }
                 if (!dailyStartTime || !dailyEndTime) {
                     showToast('Please set daily start and end time for recurring schedule', 'error');
                     return;
@@ -740,6 +961,26 @@
                     showToast('Please select at least one recurring day', 'error');
                     return;
                 }
+
+                effectiveStartTime = combineLocalDateTime(recurringStartDate, dailyStartTime);
+                effectiveEndTime = combineLocalDateTime(recurringEndDate, dailyEndTime);
+                document.getElementById('startTime').value = effectiveStartTime;
+                document.getElementById('endTime').value = effectiveEndTime;
+            }
+
+            if (!effectiveStartTime) {
+                showToast('Please select a start time', 'error');
+                return;
+            }
+
+            if (!effectiveEndTime) {
+                showToast('Please select an end time', 'error');
+                return;
+            }
+
+            if (new Date(effectiveEndTime) <= new Date(effectiveStartTime)) {
+                showToast('End time must be after start time', 'error');
+                return;
             }
 
             // Get target boards
@@ -757,8 +998,8 @@
                     title,
                     content,
                     priority,
-                    startTime: new Date(startTime).toISOString(),
-                    endTime: new Date(endTime).toISOString(),
+                    startTime: new Date(effectiveStartTime).toISOString(),
+                    endTime: new Date(effectiveEndTime).toISOString(),
                     targetBoards,
                     moduleType: 'marquee',
                     isRecurring,
@@ -783,8 +1024,15 @@
         });
 
         // Initialize on load
+        ['recurringStartDate', 'recurringEndDate', 'dailyStartTime', 'dailyEndTime'].forEach((id) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', syncNoticeWindowFromRecurring);
+            }
+        });
         init();
     </script>
 </body>
 
 </html>
+

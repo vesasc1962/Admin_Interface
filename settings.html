@@ -1,0 +1,726 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Smart Board Admin</title>
+    <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+    <script src="js/header.js"></script>
+    <style>
+        .settings-shell {
+            max-width: 980px;
+            margin: 0 auto;
+            display: grid;
+            gap: var(--space-4);
+        }
+
+        .settings-card {
+            background: var(--card);
+            border: 1px solid rgba(107, 114, 128, 0.16);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .settings-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid rgba(107, 114, 128, 0.14);
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--dark);
+        }
+
+        .section-icon {
+            width: 1.65rem;
+            height: 1.65rem;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            background: rgba(139, 30, 30, 0.1);
+            border: 1px solid rgba(139, 30, 30, 0.16);
+        }
+
+        .section-icon svg {
+            width: 0.95rem;
+            height: 0.95rem;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .settings-list {
+            display: block;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.95rem 1.2rem;
+            border-bottom: 1px solid rgba(107, 114, 128, 0.14);
+            background: var(--card);
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item-main {
+            min-width: 0;
+        }
+
+        .settings-item-title {
+            display: block;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--dark);
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .settings-item-desc {
+            margin-top: 0.22rem;
+            color: var(--gray);
+            font-size: 0.84rem;
+            line-height: 1.3;
+        }
+
+        .settings-item-control {
+            min-width: 180px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .settings-item-input {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .settings-item-input .settings-item-control {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .settings-item-input input,
+        .settings-item-input select,
+        .settings-item-input textarea {
+            width: 100%;
+        }
+
+        .settings-item-select .settings-item-control select {
+            width: 170px;
+        }
+
+        .settings-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            padding: 0.95rem 1.2rem;
+            border-top: 1px solid rgba(107, 114, 128, 0.12);
+            background: rgba(245, 246, 248, 0.55);
+        }
+
+        .settings-actions.compact {
+            border-top: none;
+            padding-top: 0.6rem;
+        }
+
+        .settings-divider {
+            height: 1px;
+            background: rgba(107, 114, 128, 0.14);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-flex;
+            width: 52px;
+            height: 30px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .switch-slider {
+            position: absolute;
+            inset: 0;
+            border-radius: 999px;
+            background: #d7dce4;
+            transition: background-color 0.2s ease;
+        }
+
+        .switch-slider::before {
+            content: "";
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+        }
+
+        .switch input:checked+.switch-slider {
+            background: var(--primary);
+        }
+
+        .switch input:checked+.switch-slider::before {
+            transform: translateX(22px);
+        }
+
+        .switch input:focus-visible+.switch-slider {
+            outline: 2px solid rgba(139, 30, 30, 0.5);
+            outline-offset: 2px;
+        }
+
+        :root[data-theme="dark"] .settings-card {
+            border-color: #2e3647;
+        }
+
+        :root[data-theme="dark"] .settings-card-title,
+        :root[data-theme="dark"] .settings-item,
+        :root[data-theme="dark"] .settings-divider {
+            border-color: #2e3647;
+        }
+
+        :root[data-theme="dark"] .settings-actions {
+            background: rgba(17, 23, 34, 0.5);
+        }
+
+        :root[data-theme="dark"] .switch-slider {
+            background: #3a465a;
+        }
+
+        :root[data-theme="dark"] .switch input:checked+.switch-slider {
+            background: var(--primary);
+        }
+
+        @media (max-width: 900px) {
+            .settings-item {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .settings-item-control {
+                width: 100%;
+                min-width: 0;
+                justify-content: flex-start;
+            }
+
+            .settings-item-select .settings-item-control select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script src="js/auth.js"></script>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="logo/Ves.png" alt="VES Logo" class="logo-img">
+                <span class="logo-text">Smart<span>Board</span></span>
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <polyline points="9,22 9,12 15,12 15,22" />
+                        </svg></span>
+                    Dashboard
+                </a>
+                <a href="boards.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg></span>
+                    Boards
+                </a>
+                <a href="create-notice.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg></span>
+                    Create Notice
+                </a>
+                <a href="groups.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                            <path d="M16 3.13a4 4 0 010 7.75" />
+                        </svg></span>
+                    Groups
+                </a>
+                <a href="schedules.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg></span>
+                    Schedules
+                </a>
+                <a href="media.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21,15 16,10 5,21" />
+                        </svg></span>
+                    Media Library
+                </a>
+                                <a href="templates.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M7 8h10" />
+                            <path d="M7 12h10" />
+                            <path d="M7 16h6" />
+                        </svg></span>
+                    Templates
+                </a><a href="quotes.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M6 10h12" />
+                            <path d="M6 14h8" />
+                            <path d="M8 6h8" />
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg></span>
+                    Quote Library
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg></span>
+                    Analytics
+                </a>
+                <a href="audit-log.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg></span>
+                    Audit Log
+                </a>
+                <a href="settings.html" class="nav-item active">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V22a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H22a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                        </svg></span>
+                    Settings
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <div class="page-header">
+                <h1>System Settings</h1>
+                <p>Configure server, appearance, notifications, and security preferences</p>
+            </div>
+
+            <div class="settings-shell">
+                <section class="settings-card">
+                    <div class="settings-card-title">
+                        <span class="section-icon">
+                            <svg viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                                <line x1="8" y1="9" x2="16" y2="9"></line>
+                                <line x1="8" y1="14" x2="16" y2="14"></line>
+                            </svg>
+                        </span>
+                        Server Configuration
+                    </div>
+                    <form id="serverConfigForm" class="settings-list">
+                        <div class="settings-item settings-item-input">
+                            <div class="settings-item-main">
+                                <label for="apiServerUrl" class="settings-item-title">API Server URL</label>
+                                <div class="settings-item-desc">Backend base URL used by the admin application.</div>
+                            </div>
+                            <div class="settings-item-control">
+                                <input type="url" id="apiServerUrl" placeholder="https://your-server.com" required>
+                            </div>
+                        </div>
+                        <div class="settings-item settings-item-input">
+                            <div class="settings-item-main">
+                                <label for="websocketUrl" class="settings-item-title">WebSocket URL</label>
+                                <div class="settings-item-desc">If empty, it will auto-generate from API Server URL.</div>
+                            </div>
+                            <div class="settings-item-control">
+                                <input type="url" id="websocketUrl" placeholder="wss://your-server.com">
+                            </div>
+                        </div>
+                        <div class="settings-item settings-item-input">
+                            <div class="settings-item-main">
+                                <label for="autoRefreshInterval" class="settings-item-title">Auto Refresh Interval (seconds)</label>
+                                <div class="settings-item-desc">Allowed range: 3 to 60 seconds.</div>
+                            </div>
+                            <div class="settings-item-control">
+                                <input type="number" id="autoRefreshInterval" min="3" max="60" step="1" required>
+                            </div>
+                        </div>
+                        <div class="settings-actions">
+                            <button type="submit" class="btn btn-primary">Save Configuration</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="settings-card">
+                    <div class="settings-card-title">
+                        <span class="section-icon">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V22a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                        </span>
+                        Appearance
+                    </div>
+                    <div class="settings-list">
+                        <label class="settings-item" for="darkModeToggle">
+                            <span class="settings-item-main">
+                                <span class="settings-item-title">Dark Mode</span>
+                                <span class="settings-item-desc">Apply dark theme across dashboard pages.</span>
+                            </span>
+                            <span class="settings-item-control">
+                                <span class="switch">
+                                    <input type="checkbox" id="darkModeToggle">
+                                    <span class="switch-slider"></span>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="settings-item" for="animationsToggle">
+                            <span class="settings-item-main">
+                                <span class="settings-item-title">Animations</span>
+                                <span class="settings-item-desc">Enable micro transitions and motion effects.</span>
+                            </span>
+                            <span class="settings-item-control">
+                                <span class="switch">
+                                    <input type="checkbox" id="animationsToggle">
+                                    <span class="switch-slider"></span>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="settings-item" for="compactModeToggle">
+                            <span class="settings-item-main">
+                                <span class="settings-item-title">Compact Mode</span>
+                                <span class="settings-item-desc">Reduce vertical spacing for dense layouts.</span>
+                            </span>
+                            <span class="settings-item-control">
+                                <span class="switch">
+                                    <input type="checkbox" id="compactModeToggle">
+                                    <span class="switch-slider"></span>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="settings-card">
+                    <div class="settings-card-title">
+                        <span class="section-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                        </span>
+                        Notifications
+                    </div>
+                    <div class="settings-list">
+                        <label class="settings-item" for="emergencyAlertsToggle">
+                            <span class="settings-item-main">
+                                <span class="settings-item-title">Emergency Alerts</span>
+                                <span class="settings-item-desc">Show toast alerts for emergency notices.</span>
+                            </span>
+                            <span class="settings-item-control">
+                                <span class="switch">
+                                    <input type="checkbox" id="emergencyAlertsToggle">
+                                    <span class="switch-slider"></span>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="settings-item" for="offlineAlertsToggle">
+                            <span class="settings-item-main">
+                                <span class="settings-item-title">Board Offline Alerts</span>
+                                <span class="settings-item-desc">Alert when a board disconnects.</span>
+                            </span>
+                            <span class="settings-item-control">
+                                <span class="switch">
+                                    <input type="checkbox" id="offlineAlertsToggle">
+                                    <span class="switch-slider"></span>
+                                </span>
+                            </span>
+                        </label>
+                        <label class="settings-item" for="soundEffectsToggle">
+                            <span class="settings-item-main">
+                                <span class="settings-item-title">Sound Effects</span>
+                                <span class="settings-item-desc">Play short alert tone for important events.</span>
+                            </span>
+                            <span class="settings-item-control">
+                                <span class="switch">
+                                    <input type="checkbox" id="soundEffectsToggle">
+                                    <span class="switch-slider"></span>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="settings-card">
+                    <div class="settings-card-title">
+                        <span class="section-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 1l9 4v6c0 5-3.8 9.7-9 11-5.2-1.3-9-6-9-11V5l9-4z"></path>
+                                <path d="M9 11l2 2 4-4"></path>
+                            </svg>
+                        </span>
+                        Security
+                    </div>
+                    <form id="passwordForm" class="settings-list">
+                        <div class="settings-item settings-item-input">
+                            <div class="settings-item-main">
+                                <label for="currentPassword" class="settings-item-title">Current Password</label>
+                                <div class="settings-item-desc">Enter your existing password for verification.</div>
+                            </div>
+                            <div class="settings-item-control">
+                                <input type="password" id="currentPassword" required>
+                            </div>
+                        </div>
+                        <div class="settings-item settings-item-input">
+                            <div class="settings-item-main">
+                                <label for="newPassword" class="settings-item-title">New Password</label>
+                                <div class="settings-item-desc">Minimum 6 characters.</div>
+                            </div>
+                            <div class="settings-item-control">
+                                <input type="password" id="newPassword" required minlength="6">
+                            </div>
+                        </div>
+                        <div class="settings-item settings-item-input">
+                            <div class="settings-item-main">
+                                <label for="confirmPassword" class="settings-item-title">Confirm New Password</label>
+                                <div class="settings-item-desc">Re-enter the new password to confirm.</div>
+                            </div>
+                            <div class="settings-item-control">
+                                <input type="password" id="confirmPassword" required minlength="6">
+                            </div>
+                        </div>
+                        <div class="settings-actions">
+                            <button type="submit" class="btn btn-primary">Change Password</button>
+                        </div>
+                    </form>
+
+                    <div class="settings-divider"></div>
+
+                    <form id="sessionForm" class="settings-list">
+                        <div class="settings-item settings-item-select">
+                            <div class="settings-item-main">
+                                <label for="sessionTimeout" class="settings-item-title">Session Timeout</label>
+                                <div class="settings-item-desc">Auto logout duration after inactivity.</div>
+                            </div>
+                            <div class="settings-item-control">
+                                <select id="sessionTimeout" required>
+                                    <option value="5">5 Minutes</option>
+                                    <option value="10">10 Minutes</option>
+                                    <option value="15">15 Minutes</option>
+                                    <option value="30">30 Minutes</option>
+                                    <option value="60">60 Minutes</option>
+                                    <option value="120">120 Minutes</option>
+                                    <option value="240">240 Minutes</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="settings-actions compact">
+                            <button type="submit" class="btn btn-secondary">Save Session Timeout</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js?v=20260211"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const CREDENTIALS_STORAGE_KEY = 'SMART_BOARD_ADMIN_CREDENTIALS';
+        const DEFAULT_CREDENTIALS = {
+            userId: 'Admin',
+            password: 'Vesasc@admin'
+        };
+
+        function getStoredCredentials() {
+            try {
+                const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
+                if (!raw) return { ...DEFAULT_CREDENTIALS };
+                const parsed = JSON.parse(raw);
+                const userId = String(parsed.userId || DEFAULT_CREDENTIALS.userId).trim() || DEFAULT_CREDENTIALS.userId;
+                const password = String(parsed.password || DEFAULT_CREDENTIALS.password) || DEFAULT_CREDENTIALS.password;
+                return { userId, password };
+            } catch (error) {
+                return { ...DEFAULT_CREDENTIALS };
+            }
+        }
+
+        function saveCredentials(nextCredentials) {
+            localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCredentials));
+        }
+
+        function normalizeHttpUrl(value) {
+            const trimmed = String(value || '').trim();
+            if (!trimmed) return '';
+            const parsed = new URL(trimmed);
+            if (!/^https?:$/i.test(parsed.protocol)) {
+                throw new Error('API URL must use http:// or https://');
+            }
+            return parsed.origin;
+        }
+
+        function normalizeWsUrl(value) {
+            const trimmed = String(value || '').trim();
+            if (!trimmed) return '';
+            const parsed = new URL(trimmed);
+            if (!/^wss?:$/i.test(parsed.protocol)) {
+                throw new Error('WebSocket URL must use ws:// or wss://');
+            }
+            return parsed.origin;
+        }
+
+        function applyToggleSetting(key, enabled) {
+            updateAdminSettings({ [key]: !!enabled });
+            if (window.adminTheme && typeof window.adminTheme.syncFromSettings === 'function') {
+                window.adminTheme.syncFromSettings();
+            }
+        }
+
+        function syncFormFromSettings() {
+            const settings = getAdminSettings();
+            document.getElementById('apiServerUrl').value = settings.SERVER_URL || '';
+            document.getElementById('websocketUrl').value = settings.WS_URL || '';
+            document.getElementById('autoRefreshInterval').value = Math.round((Number(settings.AUTO_REFRESH_INTERVAL) || 10000) / 1000);
+
+            document.getElementById('darkModeToggle').checked = settings.darkMode === true;
+            document.getElementById('animationsToggle').checked = settings.animationsEnabled !== false;
+            document.getElementById('compactModeToggle').checked = settings.compactMode === true;
+            document.getElementById('emergencyAlertsToggle').checked = settings.emergencyAlerts !== false;
+            document.getElementById('offlineAlertsToggle').checked = settings.boardOfflineAlerts !== false;
+            document.getElementById('soundEffectsToggle').checked = settings.soundEffects === true;
+            document.getElementById('sessionTimeout').value = String(settings.sessionTimeoutMinutes || 30);
+        }
+
+        document.getElementById('serverConfigForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            try {
+                const apiServerUrl = normalizeHttpUrl(document.getElementById('apiServerUrl').value);
+                const websocketInput = document.getElementById('websocketUrl').value;
+                const websocketUrl = websocketInput
+                    ? normalizeWsUrl(websocketInput)
+                    : apiServerUrl.replace(/^http/i, 'ws');
+
+                const intervalSeconds = Number(document.getElementById('autoRefreshInterval').value);
+                if (!Number.isFinite(intervalSeconds) || intervalSeconds < 3 || intervalSeconds > 60) {
+                    showToast('Auto refresh interval must be between 3 and 60 seconds', 'error');
+                    return;
+                }
+
+                updateAdminSettings({
+                    SERVER_URL: apiServerUrl,
+                    WS_URL: websocketUrl,
+                    AUTO_REFRESH_INTERVAL: Math.round(intervalSeconds * 1000)
+                });
+
+                showToast('Server configuration saved. Reloading settings...', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } catch (error) {
+                showToast(error.message || 'Invalid server configuration', 'error');
+            }
+        });
+
+        document.getElementById('darkModeToggle').addEventListener('change', (event) => {
+            applyToggleSetting('darkMode', event.target.checked);
+        });
+        document.getElementById('animationsToggle').addEventListener('change', (event) => {
+            applyToggleSetting('animationsEnabled', event.target.checked);
+        });
+        document.getElementById('compactModeToggle').addEventListener('change', (event) => {
+            applyToggleSetting('compactMode', event.target.checked);
+        });
+        document.getElementById('emergencyAlertsToggle').addEventListener('change', (event) => {
+            applyToggleSetting('emergencyAlerts', event.target.checked);
+        });
+        document.getElementById('offlineAlertsToggle').addEventListener('change', (event) => {
+            applyToggleSetting('boardOfflineAlerts', event.target.checked);
+        });
+        document.getElementById('soundEffectsToggle').addEventListener('change', (event) => {
+            applyToggleSetting('soundEffects', event.target.checked);
+        });
+
+        document.getElementById('passwordForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const credentials = getStoredCredentials();
+
+            if (currentPassword !== credentials.password) {
+                showToast('Current password is incorrect', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showToast('New password must be at least 6 characters', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showToast('New password and confirm password do not match', 'error');
+                return;
+            }
+
+            saveCredentials({
+                userId: credentials.userId,
+                password: newPassword
+            });
+
+            document.getElementById('passwordForm').reset();
+            showToast('Password updated successfully', 'success');
+        });
+
+        document.getElementById('sessionForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const sessionTimeout = Number(document.getElementById('sessionTimeout').value);
+            if (!Number.isFinite(sessionTimeout)) {
+                showToast('Please select a valid session timeout', 'error');
+                return;
+            }
+
+            updateAdminSettings({ sessionTimeoutMinutes: sessionTimeout });
+            sessionStorage.setItem('adminLastActivity', String(Date.now()));
+            showToast('Session timeout saved', 'success');
+        });
+
+        syncFormFromSettings();
+    </script>
+</body>
+
+</html>
+

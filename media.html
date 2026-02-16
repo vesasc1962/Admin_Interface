@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media Library - Smart Board Admin</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+    <script src="js/header.js"></script>
     <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
 </head>
 
@@ -67,6 +69,45 @@
                         </svg></span>
                     Media Library
                 </a>
+                                <a href="templates.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M7 8h10" />
+                            <path d="M7 12h10" />
+                            <path d="M7 16h6" />
+                        </svg></span>
+                    Templates
+                </a><a href="quotes.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M6 10h12" />
+                            <path d="M6 14h8" />
+                            <path d="M8 6h8" />
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg></span>
+                    Quote Library
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg></span>
+                    Analytics
+                </a>
+                <a href="audit-log.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg></span>
+                    Audit Log
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V22a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H22a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                        </svg></span>
+                    Settings
+                </a>
             </nav>
         </aside>
 
@@ -108,8 +149,8 @@
                             <div class="form-group">
                                 <label for="url">Media URL (YouTube, Google Drive, or direct link)</label>
                                 <input type="url" id="url" placeholder="https://www.youtube.com/watch?v=...">
-                                <small class="text-gray">Supports: YouTube, Google Drive, direct image/video
-                                    URLs</small>
+                                <small class="text-gray">Supports: YouTube, Google Drive, direct image/video URLs.
+                                    If YouTube embed is blocked (153/150), use Google Drive preview or direct MP4/WebM.</small>
                             </div>
                             <button type="submit" class="btn btn-primary">Add URL</button>
                         </form>
@@ -235,14 +276,18 @@
                 </div>
 
                 <!-- Schedule Section -->
+                <div class="form-group">
+                    <label style="font-weight: 600;">Overall Active Window *</label>
+                    <small class="text-gray">Set the main start/end date-time range for this media schedule.</small>
+                </div>
                 <div class="grid-2">
                     <div class="form-group">
-                        <label for="publishStartTime">Start Time *</label>
+                        <label for="publishStartTime">Start Date & Time *</label>
                         <input type="datetime-local" id="publishStartTime" required>
                         <small class="text-gray">Media will start showing at this time</small>
                     </div>
                     <div class="form-group">
-                        <label for="publishEndTime">End Time *</label>
+                        <label for="publishEndTime">End Date & Time *</label>
                         <input type="datetime-local" id="publishEndTime" required>
                         <small class="text-gray">Media will stop showing at this time</small>
                     </div>
@@ -251,13 +296,26 @@
                 <div class="form-group mt-3">
                     <label style="display:flex;align-items:center;gap:0.5rem;">
                         <input type="checkbox" id="publishRecurring" onchange="toggleMediaRecurring()">
-                        Daily Recurring Schedule
+                        Enable Daily Recurring Schedule
                     </label>
-                    <small class="text-gray">Enable for daily time-window playback within the start/end date range</small>
+                    <small class="text-gray">Use this when you want a date range + daily time window + selected weekdays.</small>
                 </div>
 
                 <div id="mediaRecurringOptions"
                     style="display:none; margin-top: 0.5rem; padding:1rem; border:1px solid var(--gray-light); border-radius:8px;">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="publishRecurringStartDate">Recurring From Date *</label>
+                            <input type="date" id="publishRecurringStartDate">
+                            <small class="text-gray">First date for recurring playback</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="publishRecurringEndDate">Recurring To Date *</label>
+                            <input type="date" id="publishRecurringEndDate">
+                            <small class="text-gray">Last date for recurring playback</small>
+                        </div>
+                    </div>
+
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="publishDailyStartTime">Daily Start Time *</label>
@@ -280,6 +338,7 @@
                             <label><input type="checkbox" name="mediaRecurDays" value="5" checked> Fri</label>
                             <label><input type="checkbox" name="mediaRecurDays" value="6"> Sat</label>
                         </div>
+                        <small class="text-gray">Media plays only on selected weekdays within the recurring date range.</small>
                     </div>
                 </div>
 
@@ -349,9 +408,49 @@
             return Array.from(checked).map((cb) => cb.value).join(',');
         }
 
+        function combineLocalDateTime(dateValue, timeValue) {
+            if (!dateValue || !timeValue) return '';
+            return `${dateValue}T${timeValue}`;
+        }
+
+        function syncMediaWindowFromRecurring() {
+            const recurring = document.getElementById('publishRecurring').checked;
+            if (!recurring) return;
+
+            const recurringStartDate = document.getElementById('publishRecurringStartDate').value;
+            const recurringEndDate = document.getElementById('publishRecurringEndDate').value;
+            const dailyStart = document.getElementById('publishDailyStartTime').value;
+            const dailyEnd = document.getElementById('publishDailyEndTime').value;
+
+            const syncedStart = combineLocalDateTime(recurringStartDate, dailyStart);
+            const syncedEnd = combineLocalDateTime(recurringEndDate, dailyEnd);
+
+            if (syncedStart) {
+                document.getElementById('publishStartTime').value = syncedStart;
+            }
+            if (syncedEnd) {
+                document.getElementById('publishEndTime').value = syncedEnd;
+            }
+        }
+
         function toggleMediaRecurring() {
             const recurring = document.getElementById('publishRecurring').checked;
             document.getElementById('mediaRecurringOptions').style.display = recurring ? 'block' : 'none';
+
+            if (recurring) {
+                const startTime = document.getElementById('publishStartTime').value;
+                const endTime = document.getElementById('publishEndTime').value;
+                const recurringStartInput = document.getElementById('publishRecurringStartDate');
+                const recurringEndInput = document.getElementById('publishRecurringEndDate');
+
+                if (!recurringStartInput.value && startTime) {
+                    recurringStartInput.value = startTime.slice(0, 10);
+                }
+                if (!recurringEndInput.value && endTime) {
+                    recurringEndInput.value = endTime.slice(0, 10);
+                }
+                syncMediaWindowFromRecurring();
+            }
         }
 
         async function loadMedia() {
@@ -589,6 +688,8 @@
             document.getElementById('publishEndTime').value = oneHourLater.toISOString().slice(0, 16);
             document.getElementById('selectAllBoards').checked = false;
             document.getElementById('publishRecurring').checked = false;
+            document.getElementById('publishRecurringStartDate').value = now.toISOString().slice(0, 10);
+            document.getElementById('publishRecurringEndDate').value = oneHourLater.toISOString().slice(0, 10);
             document.getElementById('publishDailyStartTime').value = '09:00';
             document.getElementById('publishDailyEndTime').value = '17:00';
             document.querySelectorAll('input[name="mediaRecurDays"]').forEach((cb) => {
@@ -632,22 +733,25 @@
             const startTimeInput = document.getElementById('publishStartTime').value;
             const endTimeInput = document.getElementById('publishEndTime').value;
             const recurring = document.getElementById('publishRecurring').checked;
+            const recurringStartDate = document.getElementById('publishRecurringStartDate').value;
+            const recurringEndDate = document.getElementById('publishRecurringEndDate').value;
             const dailyStart = document.getElementById('publishDailyStartTime').value;
             const dailyEnd = document.getElementById('publishDailyEndTime').value;
             const recurringDays = getSelectedMediaRecurringDays();
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
 
-            if (!startTimeInput || !endTimeInput) {
-                showToast('Please select start and end time', 'error');
-                return;
-            }
-
-            if (new Date(endTimeInput) <= new Date(startTimeInput)) {
-                showToast('End time must be after start time', 'error');
-                return;
-            }
+            let effectiveStartTime = startTimeInput;
+            let effectiveEndTime = endTimeInput;
 
             if (recurring) {
+                if (!recurringStartDate || !recurringEndDate) {
+                    showToast('Please select recurring from and to dates', 'error');
+                    return;
+                }
+                if (new Date(recurringEndDate) < new Date(recurringStartDate)) {
+                    showToast('Recurring To Date must be on or after From Date', 'error');
+                    return;
+                }
                 if (!dailyStart || !dailyEnd) {
                     showToast('Please set daily start and end time', 'error');
                     return;
@@ -656,6 +760,21 @@
                     showToast('Please select at least one recurring day', 'error');
                     return;
                 }
+
+                effectiveStartTime = combineLocalDateTime(recurringStartDate, dailyStart);
+                effectiveEndTime = combineLocalDateTime(recurringEndDate, dailyEnd);
+                document.getElementById('publishStartTime').value = effectiveStartTime;
+                document.getElementById('publishEndTime').value = effectiveEndTime;
+            }
+
+            if (!effectiveStartTime || !effectiveEndTime) {
+                showToast('Please select start and end time', 'error');
+                return;
+            }
+
+            if (new Date(effectiveEndTime) <= new Date(effectiveStartTime)) {
+                showToast('End time must be after start time', 'error');
+                return;
             }
 
             try {
@@ -663,8 +782,8 @@
                     title: 'Media Schedule',
                     content: 'Displaying scheduled media',
                     priority: 'normal',
-                    startTime: new Date(startTimeInput).toISOString(),
-                    endTime: new Date(endTimeInput).toISOString(),
+                    startTime: new Date(effectiveStartTime).toISOString(),
+                    endTime: new Date(effectiveEndTime).toISOString(),
                     targetBoards: selectedBoards,
                     mediaUrl: selectedMediaForPublish.url,
                     mediaType: selectedMediaForPublish.type,
@@ -677,7 +796,7 @@
                 });
 
                 if (result.success) {
-                    const startTime = new Date(startTimeInput);
+                    const startTime = new Date(effectiveStartTime);
                     const isNow = startTime <= new Date();
                     showToast(isNow ? 'Media published now!' : `Media scheduled for ${startTime.toLocaleString()}`, 'success');
                     closePublishModal();
@@ -778,8 +897,16 @@
         loadMedia();
         loadBoards();
         loadMediaSchedules();
+
+        ['publishRecurringStartDate', 'publishRecurringEndDate', 'publishDailyStartTime', 'publishDailyEndTime'].forEach((id) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', syncMediaWindowFromRecurring);
+            }
+        });
     </script>
 </body>
 
 </html>
+
 

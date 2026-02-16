@@ -13,7 +13,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #800000 0%, #4a0000 100%);
+            background: linear-gradient(135deg, #980000 0%, #7f0000 100%);
         }
 
         .login-container {
@@ -31,7 +31,7 @@
             height: 80px;
             margin: 0 auto 1.5rem;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(152, 0, 0, 0.2);
         }
 
         .login-title {
@@ -42,7 +42,7 @@
         }
 
         .login-title span {
-            color: #800000;
+            color: #980000;
         }
 
         .login-subtitle {
@@ -89,7 +89,7 @@
             border-radius: 6px;
             border: 1px solid #e5e7eb;
             background: #fff;
-            color: #800000;
+            color: #980000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -102,8 +102,8 @@
 
         .form-group input:focus {
             outline: none;
-            border-color: #800000;
-            box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1);
+            border-color: #980000;
+            box-shadow: 0 0 0 3px rgba(152, 0, 0, 0.12);
         }
 
         .btn-login {
@@ -111,7 +111,7 @@
             padding: 1rem;
             font-size: 1rem;
             font-weight: 700;
-            background: #800000;
+            background: #980000;
             color: white;
             border: none;
             border-radius: 10px;
@@ -121,7 +121,7 @@
         }
 
         .btn-login:hover {
-            background: #5c0000;
+            background: #7f0000;
             transform: translateY(-2px);
         }
 
@@ -209,11 +209,27 @@
     </div>
 
     <script>
-        // Admin credentials (hardcoded for simplicity)
-        const ADMIN_CREDENTIALS = {
+        const CREDENTIALS_STORAGE_KEY = 'SMART_BOARD_ADMIN_CREDENTIALS';
+        const DEFAULT_ADMIN_CREDENTIALS = {
             userId: 'Admin',
             password: 'Vesasc@admin'
         };
+
+        function getAdminCredentials() {
+            try {
+                const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
+                if (!raw) return DEFAULT_ADMIN_CREDENTIALS;
+                const parsed = JSON.parse(raw);
+                const userId = String(parsed.userId || DEFAULT_ADMIN_CREDENTIALS.userId).trim();
+                const password = String(parsed.password || DEFAULT_ADMIN_CREDENTIALS.password);
+                return {
+                    userId: userId || DEFAULT_ADMIN_CREDENTIALS.userId,
+                    password: password || DEFAULT_ADMIN_CREDENTIALS.password
+                };
+            } catch (error) {
+                return DEFAULT_ADMIN_CREDENTIALS;
+            }
+        }
 
         // Check if already logged in
         if (sessionStorage.getItem('adminLoggedIn') === 'true') {
@@ -244,11 +260,13 @@
 
             // Simulate slight delay for UX
             setTimeout(() => {
-                if (userId === ADMIN_CREDENTIALS.userId && password === ADMIN_CREDENTIALS.password) {
+                const adminCredentials = getAdminCredentials();
+                if (userId === adminCredentials.userId && password === adminCredentials.password) {
                     // Login successful
                     sessionStorage.setItem('adminLoggedIn', 'true');
                     sessionStorage.setItem('adminUser', userId);
                     sessionStorage.setItem('loginTime', new Date().toISOString());
+                    sessionStorage.setItem('adminLastActivity', String(Date.now()));
 
                     // Redirect to dashboard
                     window.location.href = 'index.html';

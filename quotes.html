@@ -1,0 +1,462 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Library - Smart Board Admin</title>
+    <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme.js"></script>
+    <script src="js/header.js"></script>
+</head>
+
+<body>
+    <script src="js/auth.js"></script>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="logo/Ves.png" alt="VES Logo" class="logo-img">
+                <span class="logo-text">Smart<span>Board</span></span>
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <polyline points="9,22 9,12 15,12 15,22" />
+                        </svg></span>
+                    Dashboard
+                </a>
+                <a href="boards.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg></span>
+                    Boards
+                </a>
+                <a href="create-notice.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg></span>
+                    Create Notice
+                </a>
+                <a href="groups.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                            <path d="M16 3.13a4 4 0 010 7.75" />
+                        </svg></span>
+                    Groups
+                </a>
+                <a href="schedules.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg></span>
+                    Schedules
+                </a>
+                <a href="media.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21,15 16,10 5,21" />
+                        </svg></span>
+                    Media Library
+                </a>
+                                <a href="templates.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M7 8h10" />
+                            <path d="M7 12h10" />
+                            <path d="M7 16h6" />
+                        </svg></span>
+                    Templates
+                </a><a href="quotes.html" class="nav-item active">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <path d="M6 10h12" />
+                            <path d="M6 14h8" />
+                            <path d="M8 6h8" />
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg></span>
+                    Quote Library
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg></span>
+                    Analytics
+                </a>
+                <a href="audit-log.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                        </svg></span>
+                    Audit Log
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V22a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H22a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                        </svg></span>
+                    Settings
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <div class="page-header">
+                <h1>Quote Library</h1>
+                <p>Manage fallback marquee quotes shown only when no notice is available</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Add Quote</h3>
+                </div>
+                <form id="singleQuoteForm">
+                    <div class="form-group">
+                        <label for="quoteText">Quote Text *</label>
+                        <textarea id="quoteText" required placeholder="Enter quote text"></textarea>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="quoteAuthor">Author</label>
+                            <input type="text" id="quoteAuthor" placeholder="e.g., Albert Einstein">
+                        </div>
+                        <div class="form-group" style="display:flex;align-items:flex-end;">
+                            <button type="submit" class="btn btn-primary" style="width:100%;">Add Quote</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div style="height:1px;background:var(--gray-light);margin:1rem 0;"></div>
+
+                <form id="bulkQuoteForm">
+                    <div class="form-group">
+                        <label for="bulkQuotes">Bulk Add (One line per quote)</label>
+                        <textarea id="bulkQuotes"
+                            placeholder="Format: Quote text - Author&#10;Example: Education is power - Francis Bacon"></textarea>
+                        <small class="text-gray">Supports lines with or without author name.</small>
+                    </div>
+                    <button type="submit" class="btn btn-secondary">Import Bulk Quotes</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Stored Quotes</h3>
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary btn-sm" onclick="setFilter('all')" id="filter-all">All</button>
+                        <button class="btn btn-secondary btn-sm" onclick="setFilter('enabled')"
+                            id="filter-enabled">Active</button>
+                        <button class="btn btn-secondary btn-sm" onclick="setFilter('disabled')"
+                            id="filter-disabled">Inactive</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadQuotes()">Refresh</button>
+                    </div>
+                </div>
+
+                <div class="grid-3 mb-4">
+                    <div class="stat-card">
+                        <small class="text-gray">Total Quotes</small>
+                        <h4 id="totalQuotes">0</h4>
+                    </div>
+                    <div class="stat-card">
+                        <small class="text-gray">Active Quotes</small>
+                        <h4 id="activeQuotes">0</h4>
+                    </div>
+                    <div class="stat-card">
+                        <small class="text-gray">Inactive Quotes</small>
+                        <h4 id="inactiveQuotes">0</h4>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Quote</th>
+                                <th>Author</th>
+                                <th>Status</th>
+                                <th>Added</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quotesTable">
+                            <tr>
+                                <td colspan="5">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="editQuoteModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Update Quote</h3>
+                <button class="modal-close" type="button" onclick="closeEditQuoteModal()">&times;</button>
+            </div>
+            <form id="editQuoteForm">
+                <div class="form-group">
+                    <label for="editQuoteText">Quote Text *</label>
+                    <textarea id="editQuoteText" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editQuoteAuthor">Author</label>
+                    <input type="text" id="editQuoteAuthor" placeholder="e.g., Albert Einstein">
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditQuoteModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Quote</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=20260211"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let quotes = [];
+        let currentFilter = 'all';
+        let editingQuoteId = null;
+
+        connectWebSocket();
+        addWSListener((data) => {
+            if (!data || !data.type) return;
+            if (data.type.includes('quote')) {
+                loadQuotes();
+            }
+        });
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getFilteredQuotes() {
+            if (currentFilter === 'enabled') return quotes.filter((quote) => quote.enabled === true);
+            if (currentFilter === 'disabled') return quotes.filter((quote) => quote.enabled !== true);
+            return quotes;
+        }
+
+        function renderSummary() {
+            const active = quotes.filter((quote) => quote.enabled === true).length;
+            const inactive = quotes.length - active;
+            document.getElementById('totalQuotes').textContent = String(quotes.length);
+            document.getElementById('activeQuotes').textContent = String(active);
+            document.getElementById('inactiveQuotes').textContent = String(inactive);
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('quotesTable');
+            const filtered = getFilteredQuotes();
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <p>No quotes found for this filter.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((quote) => {
+                const statusBadge = quote.enabled ? 'active' : 'inactive';
+                const statusLabel = quote.enabled ? 'Active' : 'Inactive';
+                const toggleLabel = quote.enabled ? 'Disable' : 'Enable';
+                const toggleClass = quote.enabled ? 'btn-secondary' : 'btn-success';
+                const text = escapeHtml(quote.text || '');
+                const author = escapeHtml(quote.author || '');
+                return `
+                    <tr>
+                        <td style="max-width:520px;white-space:normal;line-height:1.45;">${text}</td>
+                        <td>${author || '-'}</td>
+                        <td><span class="badge badge-${statusBadge}">${statusLabel}</span></td>
+                        <td>${formatDate(quote.createdAt)}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary btn-sm" onclick="openEditQuoteModal('${quote.quoteId}')">Update</button>
+                                <button class="btn ${toggleClass} btn-sm" onclick="toggleQuote('${quote.quoteId}', ${quote.enabled ? 'false' : 'true'})">${toggleLabel}</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteQuote('${quote.quoteId}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openEditQuoteModal(quoteId) {
+            const quote = quotes.find((item) => item.quoteId === quoteId);
+            if (!quote) {
+                showToast('Quote not found', 'error');
+                return;
+            }
+
+            editingQuoteId = quoteId;
+            document.getElementById('editQuoteText').value = quote.text || '';
+            document.getElementById('editQuoteAuthor').value = quote.author || '';
+            document.getElementById('editQuoteModal').classList.add('show');
+        }
+
+        function closeEditQuoteModal() {
+            editingQuoteId = null;
+            document.getElementById('editQuoteForm').reset();
+            document.getElementById('editQuoteModal').classList.remove('show');
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['all', 'enabled', 'disabled'].forEach((item) => {
+                const button = document.getElementById(`filter-${item}`);
+                if (!button) return;
+                if (item === filter) {
+                    button.classList.remove('btn-secondary');
+                    button.classList.add('btn-success');
+                } else {
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-secondary');
+                }
+            });
+            renderTable();
+        }
+
+        async function loadQuotes() {
+            try {
+                const result = await api.get('/quotes');
+                quotes = Array.isArray(result.quotes) ? result.quotes : [];
+                renderSummary();
+                renderTable();
+            } catch (error) {
+                console.error('Load quotes error:', error);
+                showToast('Failed to load quotes', 'error');
+            }
+        }
+
+        async function toggleQuote(quoteId, enabled) {
+            try {
+                const result = await api.patch(`/quotes/${quoteId}/toggle`, { enabled });
+                if (result.success) {
+                    showToast(enabled ? 'Quote enabled' : 'Quote disabled', 'success');
+                    loadQuotes();
+                } else {
+                    showToast(result.error || 'Failed to update quote', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to update quote', 'error');
+            }
+        }
+
+        async function deleteQuote(quoteId) {
+            if (!confirm('Delete this quote?')) return;
+            try {
+                const result = await api.delete(`/quotes/${quoteId}`);
+                if (result.success) {
+                    showToast('Quote deleted', 'success');
+                    loadQuotes();
+                } else {
+                    showToast(result.error || 'Failed to delete quote', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to delete quote', 'error');
+            }
+        }
+
+        document.getElementById('singleQuoteForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const text = document.getElementById('quoteText').value.trim();
+            const author = document.getElementById('quoteAuthor').value.trim();
+            if (!text) {
+                showToast('Quote text is required', 'error');
+                return;
+            }
+
+            try {
+                const result = await api.post('/quotes', { text, author });
+                if (result.success) {
+                    document.getElementById('quoteText').value = '';
+                    document.getElementById('quoteAuthor').value = '';
+                    showToast('Quote added', 'success');
+                    loadQuotes();
+                } else {
+                    showToast(result.error || 'Failed to add quote', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to add quote', 'error');
+            }
+        });
+
+        document.getElementById('bulkQuoteForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const rawText = document.getElementById('bulkQuotes').value.trim();
+            if (!rawText) {
+                showToast('Enter at least one quote line', 'error');
+                return;
+            }
+
+            try {
+                const result = await api.post('/quotes/bulk', { rawText });
+                if (result.success) {
+                    document.getElementById('bulkQuotes').value = '';
+                    showToast(`Imported ${result.added} quote(s), skipped ${result.skipped}`, 'success');
+                    loadQuotes();
+                } else {
+                    showToast(result.error || 'Failed to import quotes', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to import quotes', 'error');
+            }
+        });
+
+        document.getElementById('editQuoteForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (!editingQuoteId) return;
+
+            const text = document.getElementById('editQuoteText').value.trim();
+            const author = document.getElementById('editQuoteAuthor').value.trim();
+
+            if (!text) {
+                showToast('Quote text is required', 'error');
+                return;
+            }
+
+            try {
+                const result = await api.put(`/quotes/${editingQuoteId}`, { text, author });
+                if (result.success) {
+                    closeEditQuoteModal();
+                    showToast('Quote updated', 'success');
+                    loadQuotes();
+                } else {
+                    showToast(result.error || 'Failed to update quote', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to update quote', 'error');
+            }
+        });
+
+        loadQuotes();
+        setFilter('all');
+        setInterval(loadQuotes, getAutoRefreshInterval());
+    </script>
+</body>
+
+</html>
+
+
