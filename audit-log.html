@@ -312,15 +312,6 @@
         let auditQuery = '';
         let auditLogs = [];
 
-        function escapeHtml(value) {
-            return String(value || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
         function toLocalTime(value) {
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return '';
@@ -329,8 +320,31 @@
 
         function normalizeType(value) {
             const raw = String(value || '').toLowerCase();
-            if (['system', 'board', 'schedule', 'group', 'content'].includes(raw)) return raw;
+            if (['system', 'board', 'schedule', 'group', 'content', 'auth', 'media', 'quote', 'admin'].includes(raw)) {
+                return raw === 'media' || raw === 'quote' || raw === 'admin' || raw === 'auth' ? 'content' : raw;
+            }
             return 'system';
+        }
+
+        function getActionText(log) {
+            return String(log && log.action || 'Event');
+        }
+
+        function getMessageText(log) {
+            const details = log && log.details && typeof log.details === 'object' ? log.details : null;
+            if (details && Object.keys(details).length > 0) {
+                const detailText = Object.keys(details)
+                    .slice(0, 3)
+                    .map((key) => `${key}: ${details[key]}`)
+                    .join(' | ');
+                return detailText || '';
+            }
+            return String(log && log.message || '');
+        }
+
+        function getActorText(log) {
+            const actor = String(log && log.actorId || '').trim();
+            return actor || 'Admin';
         }
 
         function setAuditTab(tab) {
@@ -361,12 +375,12 @@
         function matchesSearch(log) {
             if (!auditQuery) return true;
             const haystack = [
-                log.action,
-                log.message,
-                log.user,
-                log.type,
-                toLocalTime(log.timestamp),
-                log.timestamp
+                getActionText(log),
+                getMessageText(log),
+                getActorText(log),
+                log && log.type,
+                toLocalTime(log && log.timestamp),
+                log && log.timestamp
             ].map((v) => String(v || '').toLowerCase()).join(' ');
             return haystack.includes(auditQuery);
         }
@@ -397,69 +411,108 @@
             return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>';
         }
 
+        function renderEmpty(message) {
+            const container = document.getElementById('auditList');
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+            const text = document.createElement('p');
+            text.textContent = message;
+            empty.appendChild(text);
+            container.replaceChildren(empty);
+        }
+
         function renderAuditList() {
             const container = document.getElementById('auditList');
             const visible = getVisibleLogs();
 
             if (visible.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <p>No logs found for the selected filter.</p>
-                    </div>
-                `;
+                renderEmpty('No logs found for the selected filter.');
                 return;
             }
 
-            container.innerHTML = visible.map((log) => {
+            const fragment = document.createDocumentFragment();
+            visible.forEach((log) => {
                 const type = normalizeType(log.type);
-                const action = escapeHtml(log.action);
-                const message = escapeHtml(log.message || '');
-                const user = escapeHtml(log.user || 'Admin');
-                const time = escapeHtml(toLocalTime(log.timestamp) || '');
+                const action = getActionText(log);
+                const message = getMessageText(log);
+                const actor = getActorText(log);
+                const time = toLocalTime(log.timestamp);
                 const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
 
-                return `
-                    <div class="audit-item">
-                        <div class="audit-icon ${type}">
-                            ${iconSvg(type)}
-                        </div>
-                        <div style="min-width:0;">
-                            <div class="audit-title">${action}</div>
-                            ${message ? `<div class="audit-message">${message}</div>` : ''}
-                            <div class="audit-meta">
-                                <span class="audit-chip">User: ${user}</span>
-                                <span class="audit-chip">${time}</span>
-                                <span class="audit-chip">Type: ${typeLabel}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                const row = document.createElement('div');
+                row.className = 'audit-item';
+
+                const icon = document.createElement('div');
+                icon.className = `audit-icon ${type}`;
+                icon.innerHTML = iconSvg(type);
+
+                const body = document.createElement('div');
+                body.style.minWidth = '0';
+
+                const title = document.createElement('div');
+                title.className = 'audit-title';
+                title.textContent = action;
+                body.appendChild(title);
+
+                if (message) {
+                    const msg = document.createElement('div');
+                    msg.className = 'audit-message';
+                    msg.textContent = message;
+                    body.appendChild(msg);
+                }
+
+                const meta = document.createElement('div');
+                meta.className = 'audit-meta';
+
+                const chipUser = document.createElement('span');
+                chipUser.className = 'audit-chip';
+                chipUser.textContent = `User: ${actor}`;
+                meta.appendChild(chipUser);
+
+                const chipTime = document.createElement('span');
+                chipTime.className = 'audit-chip';
+                chipTime.textContent = time;
+                meta.appendChild(chipTime);
+
+                const chipType = document.createElement('span');
+                chipType.className = 'audit-chip';
+                chipType.textContent = `Type: ${typeLabel}`;
+                meta.appendChild(chipType);
+
+                body.appendChild(meta);
+                row.appendChild(icon);
+                row.appendChild(body);
+                fragment.appendChild(row);
+            });
+
+            container.replaceChildren(fragment);
         }
 
-        function loadAuditLogs() {
-            if (!window.auditStore || typeof window.auditStore.getLogs !== 'function') {
+        async function loadAuditLogs() {
+            try {
+                const result = await api.get('/audit/logs?limit=1000');
+                auditLogs = (result && result.success && Array.isArray(result.logs)) ? result.logs : [];
+                renderSummary();
+                renderAuditList();
+            } catch (error) {
+                console.error('Failed to load audit logs:', error);
                 auditLogs = [];
                 renderSummary();
-                document.getElementById('auditList').innerHTML = `
-                    <div class="empty-state">
-                        <p>Audit log storage is not available.</p>
-                    </div>
-                `;
-                return;
+                renderEmpty('Failed to load server audit logs.');
             }
-            auditLogs = window.auditStore.getLogs();
-            renderSummary();
-            renderAuditList();
         }
 
         connectWebSocket();
-        addWSListener(() => loadAuditLogs());
+        addWSListener((data) => {
+            if (!data || !data.type) return;
+            if (String(data.type).includes('board') || String(data.type).includes('notice') || String(data.type).includes('quote')) {
+                loadAuditLogs();
+            }
+        });
 
         loadAuditLogs();
-        setInterval(loadAuditLogs, 5000);
+        setInterval(loadAuditLogs, 10000);
     </script>
 </body>
 
 </html>
-

@@ -612,6 +612,23 @@
         let boards = [];
         let groups = [];
 
+        function esc(value) {
+            if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeBoardStatus(value) {
+            const status = String(value || '').trim().toLowerCase();
+            if (status === 'active' || status === 'online') return 'active';
+            if (status === 'offline' || status === 'inactive') return 'offline';
+            return 'offline';
+        }
+
         function applyTemplateFromQuery() {
             const templateId = new URLSearchParams(window.location.search).get('template');
             const langParam = String(new URLSearchParams(window.location.search).get('lang') || 'en').toLowerCase();
@@ -665,17 +682,20 @@
                 if (boards.length === 0) {
                     container.innerHTML = '<p class="text-center text-gray">No boards registered</p>';
                 } else {
-                    container.innerHTML = boards.map(b => `
+                    container.innerHTML = boards.map(b => {
+                        const status = normalizeBoardStatus(b.status);
+                        return `
                         <div class="checkbox-item">
                             <label>
-                                <input type="checkbox" class="board-checkbox" value="${b.boardId}">
-                                ${b.boardId} - ${b.roomNumber}
-                                <span class="badge badge-${b.status}" style="margin-left: 0.5rem; font-size: 0.7rem;">
-                                    ${b.status}
+                                <input type="checkbox" class="board-checkbox" value="${esc(b.boardId)}">
+                                ${esc(b.boardId)} - ${esc(b.roomNumber)}
+                                <span class="badge badge-${status}" style="margin-left: 0.5rem; font-size: 0.7rem;">
+                                    ${esc(status)}
                                 </span>
                             </label>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
                 }
             } catch (error) {
                 console.error('Load boards error:', error);

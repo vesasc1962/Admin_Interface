@@ -284,6 +284,7 @@
                 const toggleClass = quote.enabled ? 'btn-secondary' : 'btn-success';
                 const text = escapeHtml(quote.text || '');
                 const author = escapeHtml(quote.author || '');
+                const safeQuoteId = String(quote.quoteId || '').replace(/[^A-Za-z0-9_-]/g, '');
                 return `
                     <tr>
                         <td style="max-width:520px;white-space:normal;line-height:1.45;">${text}</td>
@@ -292,9 +293,9 @@
                         <td>${formatDate(quote.createdAt)}</td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn btn-primary btn-sm" onclick="openEditQuoteModal('${quote.quoteId}')">Update</button>
-                                <button class="btn ${toggleClass} btn-sm" onclick="toggleQuote('${quote.quoteId}', ${quote.enabled ? 'false' : 'true'})">${toggleLabel}</button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteQuote('${quote.quoteId}')">Delete</button>
+                                <button class="btn btn-primary btn-sm" onclick="openEditQuoteModal('${safeQuoteId}')">Update</button>
+                                <button class="btn ${toggleClass} btn-sm" onclick="toggleQuote('${safeQuoteId}', ${quote.enabled ? 'false' : 'true'})">${toggleLabel}</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteQuote('${safeQuoteId}')">Delete</button>
                             </div>
                         </td>
                     </tr>

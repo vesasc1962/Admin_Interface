@@ -505,10 +505,10 @@
                         <div class="settings-item settings-item-input">
                             <div class="settings-item-main">
                                 <label for="newPassword" class="settings-item-title">New Password</label>
-                                <div class="settings-item-desc">Minimum 6 characters.</div>
+                                <div class="settings-item-desc">Minimum 12 characters with uppercase, lowercase, number, and symbol.</div>
                             </div>
                             <div class="settings-item-control">
-                                <input type="password" id="newPassword" required minlength="6">
+                                <input type="password" id="newPassword" required minlength="12">
                             </div>
                         </div>
                         <div class="settings-item settings-item-input">
@@ -517,7 +517,7 @@
                                 <div class="settings-item-desc">Re-enter the new password to confirm.</div>
                             </div>
                             <div class="settings-item-control">
-                                <input type="password" id="confirmPassword" required minlength="6">
+                                <input type="password" id="confirmPassword" required minlength="12">
                             </div>
                         </div>
                         <div class="settings-actions">
@@ -557,27 +557,58 @@
     <script src="js/config.js?v=20260211"></script>
     <script src="js/api.js"></script>
     <script>
-        const CREDENTIALS_STORAGE_KEY = 'SMART_BOARD_ADMIN_CREDENTIALS';
-        const DEFAULT_CREDENTIALS = {
-            userId: 'Admin',
-            password: 'Vesasc@admin'
-        };
+        const ADMIN_LOGGED_IN_KEY = 'adminLoggedIn';
+        const ADMIN_USER_KEY = 'adminUser';
+        const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken';
+        const ADMIN_LOGIN_TIME_KEY = 'loginTime';
+        const ADMIN_LAST_ACTIVITY_KEY = 'adminLastActivity';
+        const ADMIN_SESSION_EXPIRES_KEY = 'adminSessionExpiresAt';
+        const SETTINGS_KEY = 'SMART_BOARD_APP_SETTINGS';
+        const APPEARANCE_PREF_KEY = 'appearancePreferenceSet';
 
-        function getStoredCredentials() {
+        function getSettingsSafe() {
+            if (typeof window.getAdminSettings === 'function') {
+                return window.getAdminSettings();
+            }
+
             try {
-                const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
-                if (!raw) return { ...DEFAULT_CREDENTIALS };
+                const raw = localStorage.getItem(SETTINGS_KEY);
+                if (!raw) return {};
                 const parsed = JSON.parse(raw);
-                const userId = String(parsed.userId || DEFAULT_CREDENTIALS.userId).trim() || DEFAULT_CREDENTIALS.userId;
-                const password = String(parsed.password || DEFAULT_CREDENTIALS.password) || DEFAULT_CREDENTIALS.password;
-                return { userId, password };
+                return parsed && typeof parsed === 'object' ? parsed : {};
             } catch (error) {
-                return { ...DEFAULT_CREDENTIALS };
+                return {};
             }
         }
 
-        function saveCredentials(nextCredentials) {
-            localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCredentials));
+        function updateSettingsSafe(partial) {
+            if (typeof window.updateAdminSettings === 'function') {
+                return window.updateAdminSettings(partial || {});
+            }
+
+            const current = getSettingsSafe();
+            const safePartial = partial && typeof partial === 'object' ? { ...partial } : {};
+            if (Object.prototype.hasOwnProperty.call(safePartial, 'darkMode')) {
+                safePartial[APPEARANCE_PREF_KEY] = true;
+            }
+            const merged = { ...current, ...safePartial };
+            try {
+                localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+            } catch (error) {
+                // Ignore storage failures; UI can still reflect the toggle state.
+            }
+            return merged;
+        }
+
+        function isStrongPassword(value) {
+            const text = String(value || '');
+            return (
+                text.length >= 12 &&
+                /[a-z]/.test(text) &&
+                /[A-Z]/.test(text) &&
+                /\d/.test(text) &&
+                /[^A-Za-z0-9]/.test(text)
+            );
         }
 
         function normalizeHttpUrl(value) {
@@ -601,14 +632,31 @@
         }
 
         function applyToggleSetting(key, enabled) {
-            updateAdminSettings({ [key]: !!enabled });
-            if (window.adminTheme && typeof window.adminTheme.syncFromSettings === 'function') {
-                window.adminTheme.syncFromSettings();
+            const nextEnabled = !!enabled;
+            updateSettingsSafe({ [key]: nextEnabled });
+
+            // Apply runtime effects immediately (without re-persisting) so switches feel responsive.
+            if (window.adminTheme) {
+                if (key === 'darkMode' && typeof window.adminTheme.setDarkMode === 'function') {
+                    window.adminTheme.setDarkMode(nextEnabled, false);
+                    return;
+                }
+                if (key === 'animationsEnabled' && typeof window.adminTheme.setAnimationsEnabled === 'function') {
+                    window.adminTheme.setAnimationsEnabled(nextEnabled, false);
+                    return;
+                }
+                if (key === 'compactMode' && typeof window.adminTheme.setCompactMode === 'function') {
+                    window.adminTheme.setCompactMode(nextEnabled, false);
+                    return;
+                }
+                if (typeof window.adminTheme.syncFromSettings === 'function') {
+                    window.adminTheme.syncFromSettings();
+                }
             }
         }
 
         function syncFormFromSettings() {
-            const settings = getAdminSettings();
+            const settings = getSettingsSafe();
             document.getElementById('apiServerUrl').value = settings.SERVER_URL || '';
             document.getElementById('websocketUrl').value = settings.WS_URL || '';
             document.getElementById('autoRefreshInterval').value = Math.round((Number(settings.AUTO_REFRESH_INTERVAL) || 10000) / 1000);
@@ -622,9 +670,15 @@
             document.getElementById('sessionTimeout').value = String(settings.sessionTimeoutMinutes || 30);
         }
 
-        document.getElementById('serverConfigForm').addEventListener('submit', (event) => {
-            event.preventDefault();
+        function bindIfPresent(id, eventName, handler) {
+            const el = document.getElementById(id);
+            if (!el) return null;
+            el.addEventListener(eventName, handler);
+            return el;
+        }
 
+        bindIfPresent('serverConfigForm', 'submit', (event) => {
+            event.preventDefault();
             try {
                 const apiServerUrl = normalizeHttpUrl(document.getElementById('apiServerUrl').value);
                 const websocketInput = document.getElementById('websocketUrl').value;
@@ -638,11 +692,12 @@
                     return;
                 }
 
-                updateAdminSettings({
-                    SERVER_URL: apiServerUrl,
-                    WS_URL: websocketUrl,
-                    AUTO_REFRESH_INTERVAL: Math.round(intervalSeconds * 1000)
-                });
+                updateSettingsSafe({
+                     SERVER_URL: apiServerUrl,
+                     WS_URL: websocketUrl,
+                     AUTO_REFRESH_INTERVAL: Math.round(intervalSeconds * 1000),
+                     serverUrlPinned: true
+                 });
 
                 showToast('Server configuration saved. Reloading settings...', 'success');
                 setTimeout(() => {
@@ -653,40 +708,34 @@
             }
         });
 
-        document.getElementById('darkModeToggle').addEventListener('change', (event) => {
+        bindIfPresent('darkModeToggle', 'change', (event) => {
             applyToggleSetting('darkMode', event.target.checked);
         });
-        document.getElementById('animationsToggle').addEventListener('change', (event) => {
+        bindIfPresent('animationsToggle', 'change', (event) => {
             applyToggleSetting('animationsEnabled', event.target.checked);
         });
-        document.getElementById('compactModeToggle').addEventListener('change', (event) => {
+        bindIfPresent('compactModeToggle', 'change', (event) => {
             applyToggleSetting('compactMode', event.target.checked);
         });
-        document.getElementById('emergencyAlertsToggle').addEventListener('change', (event) => {
+        bindIfPresent('emergencyAlertsToggle', 'change', (event) => {
             applyToggleSetting('emergencyAlerts', event.target.checked);
         });
-        document.getElementById('offlineAlertsToggle').addEventListener('change', (event) => {
+        bindIfPresent('offlineAlertsToggle', 'change', (event) => {
             applyToggleSetting('boardOfflineAlerts', event.target.checked);
         });
-        document.getElementById('soundEffectsToggle').addEventListener('change', (event) => {
+        bindIfPresent('soundEffectsToggle', 'change', (event) => {
             applyToggleSetting('soundEffects', event.target.checked);
         });
 
-        document.getElementById('passwordForm').addEventListener('submit', (event) => {
+        bindIfPresent('passwordForm', 'submit', async (event) => {
             event.preventDefault();
 
             const currentPassword = document.getElementById('currentPassword').value;
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            const credentials = getStoredCredentials();
 
-            if (currentPassword !== credentials.password) {
-                showToast('Current password is incorrect', 'error');
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                showToast('New password must be at least 6 characters', 'error');
+            if (!isStrongPassword(newPassword)) {
+                showToast('Use at least 12 chars with uppercase, lowercase, number, and symbol', 'error');
                 return;
             }
 
@@ -695,16 +744,34 @@
                 return;
             }
 
-            saveCredentials({
-                userId: credentials.userId,
-                password: newPassword
-            });
+            try {
+                const result = await api.post('/admin/change-password', {
+                    currentPassword,
+                    newPassword
+                });
 
-            document.getElementById('passwordForm').reset();
-            showToast('Password updated successfully', 'success');
+                if (!result || result.success !== true || !result.token) {
+                    showToast((result && result.error) ? result.error : 'Failed to change password', 'error');
+                    return;
+                }
+
+                sessionStorage.setItem(ADMIN_LOGGED_IN_KEY, 'true');
+                sessionStorage.setItem(ADMIN_USER_KEY, String(result.userId || sessionStorage.getItem(ADMIN_USER_KEY) || 'Admin'));
+                sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, String(result.token));
+                sessionStorage.setItem(ADMIN_LOGIN_TIME_KEY, new Date().toISOString());
+                sessionStorage.setItem(ADMIN_LAST_ACTIVITY_KEY, String(Date.now()));
+                if (result.expiresAt) {
+                    sessionStorage.setItem(ADMIN_SESSION_EXPIRES_KEY, String(result.expiresAt));
+                }
+
+                document.getElementById('passwordForm').reset();
+                showToast('Password changed successfully', 'success');
+            } catch (error) {
+                showToast('Failed to change password', 'error');
+            }
         });
 
-        document.getElementById('sessionForm').addEventListener('submit', (event) => {
+        bindIfPresent('sessionForm', 'submit', (event) => {
             event.preventDefault();
 
             const sessionTimeout = Number(document.getElementById('sessionTimeout').value);
@@ -713,12 +780,22 @@
                 return;
             }
 
-            updateAdminSettings({ sessionTimeoutMinutes: sessionTimeout });
+            updateSettingsSafe({ sessionTimeoutMinutes: sessionTimeout });
             sessionStorage.setItem('adminLastActivity', String(Date.now()));
             showToast('Session timeout saved', 'success');
         });
 
-        syncFormFromSettings();
+        // Initial sync + enforce light mode as the default when no preference exists.
+        (function initSettingsPage() {
+            const settings = getSettingsSafe();
+            if (settings.darkMode === undefined || settings.darkMode === null) {
+                updateSettingsSafe({ darkMode: false });
+            }
+            syncFormFromSettings();
+            if (window.adminTheme && typeof window.adminTheme.syncFromSettings === 'function') {
+                window.adminTheme.syncFromSettings();
+            }
+        })();
     </script>
 </body>
 

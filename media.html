@@ -364,6 +364,40 @@
         let selectedMediaForPublish = null;
         let mediaSchedules = [];
 
+        function esc(value) {
+            if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeScheduleState(value) {
+            const state = String(value || '').trim().toLowerCase();
+            if (['active', 'scheduled', 'inactive', 'expired'].includes(state)) return state;
+            return 'scheduled';
+        }
+
+        function safeId(value) {
+            return String(value || '').replace(/[^A-Za-z0-9_-]/g, '');
+        }
+
+        function safeUrl(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const candidate = raw.startsWith('/') ? `${config.SERVER_URL}${raw}` : raw;
+            try {
+                const parsed = new URL(candidate);
+                if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+                if (parsed.username || parsed.password) return '';
+                return parsed.toString();
+            } catch (error) {
+                return '';
+            }
+        }
+
         connectWebSocket();
         addWSListener((data) => {
             if (!data || !data.type) return;
@@ -478,14 +512,16 @@
                 }
 
                 tbody.innerHTML = media.map((m) => {
-                    const isImage = m.type === 'image' || m.pathOrUrl.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
-                    const isVideo = m.type === 'video' || m.pathOrUrl.match(/\.(mp4|webm|ogg|mov|mkv)(\?.*)?$/i);
-                    const isYouTube = m.type === 'youtube' || m.pathOrUrl.includes('youtube.com') || m.pathOrUrl.includes('youtu.be');
-                    const fullUrl = m.pathOrUrl.startsWith('/') ? config.SERVER_URL + m.pathOrUrl : m.pathOrUrl;
+                    const mediaTypeRaw = String(m.type || '').toLowerCase();
+                    const mediaPath = String(m.pathOrUrl || '');
+                    const isImage = mediaTypeRaw === 'image' || mediaPath.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
+                    const isVideo = mediaTypeRaw === 'video' || mediaPath.match(/\.(mp4|webm|ogg|mov|mkv)(\?.*)?$/i);
+                    const isYouTube = mediaTypeRaw === 'youtube' || mediaPath.includes('youtube.com') || mediaPath.includes('youtu.be');
+                    const fullUrl = safeUrl(mediaPath) || '#';
 
                     let youtubeThumb = '';
                     if (isYouTube) {
-                        const ytId = extractYouTubeId(m.pathOrUrl);
+                        const ytId = extractYouTubeId(mediaPath);
                         if (ytId) {
                             youtubeThumb = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
                         }
@@ -494,31 +530,34 @@
                     let previewHtml = '';
                     if (isYouTube && youtubeThumb) {
                         previewHtml = `<div class="media-preview" style="position:relative;display:flex;align-items:center;justify-content:center;">
-                            <img src="${youtubeThumb}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="YouTube">
+                            <img src="${esc(youtubeThumb)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="YouTube">
                             <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;background:rgba(255,0,0,0.85);border-radius:6px;display:flex;align-items:center;justify-content:center;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="9.5,7.5 16.5,12 9.5,16.5"/></svg>
                             </div>
                         </div>`;
                     } else if (isImage) {
-                        previewHtml = `<img src="${fullUrl}" class="media-preview" alt="Preview">`;
+                        previewHtml = `<img src="${esc(fullUrl)}" class="media-preview" alt="Preview">`;
                     } else if (isVideo) {
-                        previewHtml = `<video src="${fullUrl}" class="media-preview" muted></video>`;
+                        previewHtml = `<video src="${esc(fullUrl)}" class="media-preview" muted></video>`;
                     } else {
                         previewHtml = `<div class="media-preview" style="display:flex;align-items:center;justify-content:center;">URL</div>`;
                     }
 
-                    const escapedUrl = fullUrl.replace(/'/g, "\\'");
+                    const encodedUrl = encodeURIComponent(fullUrl);
+                    const encodedType = encodeURIComponent(mediaTypeRaw || 'file');
+                    const safeMediaId = safeId(m.mediaId);
+                    const displayPath = mediaPath.length > 40 ? `${mediaPath.substring(0, 40)}...` : mediaPath;
 
                     return `
                         <tr>
                             <td>${previewHtml}</td>
-                            <td><span class="badge badge-${isYouTube ? 'warning' : 'normal'}">${isYouTube ? 'youtube' : (m.type || 'file')}</span></td>
+                            <td><span class="badge badge-${isYouTube ? 'warning' : 'normal'}">${esc(isYouTube ? 'youtube' : (m.type || 'file'))}</span></td>
                             <td>
-                                <a href="${fullUrl}" target="_blank" style="color: var(--primary); word-break: break-all; font-size: 0.85rem;">
-                                    ${m.pathOrUrl.length > 40 ? m.pathOrUrl.substring(0, 40) + '...' : m.pathOrUrl}
+                                <a href="${esc(fullUrl)}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); word-break: break-all; font-size: 0.85rem;">
+                                    ${esc(displayPath)}
                                 </a>
                             </td>
-                            <td style="font-size: 0.85rem;">${formatDate(m.uploadedAt)}</td>
+                            <td style="font-size: 0.85rem;">${esc(formatDate(m.uploadedAt))}</td>
                             <td>
                                 <span class="publish-status unpublished">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -529,13 +568,13 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-success btn-sm" onclick="openPublishModal('${m.mediaId}', '${escapedUrl}', '${m.type}')">
+                                    <button class="btn btn-success btn-sm" onclick="openPublishModal('${safeMediaId}', '${encodedUrl}', '${encodedType}')">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
                                         </svg>
                                         Publish
                                     </button>
-                                    <button class="btn btn-danger btn-sm" onclick="deleteMedia('${m.mediaId}')">
+                                    <button class="btn btn-danger btn-sm" onclick="deleteMedia('${safeMediaId}')">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                                         </svg>
@@ -590,18 +629,20 @@
                 const enabled = String(schedule.enabled) === 'true' || schedule.enabled === true;
                 const toggleLabel = enabled ? 'Disable' : 'Enable';
                 const toggleClass = enabled ? 'btn-secondary' : 'btn-success';
+                const safeScheduleId = safeId(schedule.scheduleId);
+                const status = normalizeScheduleState(schedule.state);
 
                 return `
                     <tr>
-                        <td><strong>${schedule.title || 'Media Schedule'}</strong></td>
-                        <td>${targets}</td>
-                        <td>${formatDate(schedule.startTime)}</td>
-                        <td>${formatDate(schedule.endTime)}</td>
-                        <td><span class="badge badge-${schedule.state}">${schedule.state}</span></td>
+                        <td><strong>${esc(schedule.title || 'Media Schedule')}</strong></td>
+                        <td>${esc(targets)}</td>
+                        <td>${esc(formatDate(schedule.startTime))}</td>
+                        <td>${esc(formatDate(schedule.endTime))}</td>
+                        <td><span class="badge badge-${status}">${esc(status)}</span></td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn ${toggleClass} btn-sm" onclick="toggleMediaSchedule('${schedule.scheduleId}', ${enabled ? 'false' : 'true'})">${toggleLabel}</button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteMediaSchedule('${schedule.scheduleId}')">Delete</button>
+                                <button class="btn ${toggleClass} btn-sm" onclick="toggleMediaSchedule('${safeScheduleId}', ${enabled ? 'false' : 'true'})">${esc(toggleLabel)}</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteMediaSchedule('${safeScheduleId}')">Delete</button>
                             </div>
                         </td>
                     </tr>
@@ -648,21 +689,53 @@
             }
         }
 
-        function openPublishModal(mediaId, url, type) {
-            selectedMediaForPublish = { mediaId, url, type };
+        function openPublishModal(mediaId, encodedUrl, encodedType) {
+            const url = decodeURIComponent(String(encodedUrl || ''));
+            const type = decodeURIComponent(String(encodedType || ''));
+            selectedMediaForPublish = { mediaId: safeId(mediaId), url, type };
 
             const preview = document.getElementById('publishPreview');
+            preview.replaceChildren();
+
             const ytId = extractYouTubeId(url);
+            const resolvedUrl = safeUrl(url);
             if (ytId || type === 'youtube') {
                 if (ytId) {
-                    preview.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0" class="media-preview-lg" style="width:100%;height:300px;border:none;border-radius:8px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                    const iframe = document.createElement('iframe');
+                    iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0`;
+                    iframe.className = 'media-preview-lg';
+                    iframe.style.width = '100%';
+                    iframe.style.height = '300px';
+                    iframe.style.border = 'none';
+                    iframe.style.borderRadius = '8px';
+                    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                    iframe.allowFullscreen = true;
+                    preview.appendChild(iframe);
                 } else {
-                    preview.innerHTML = `<div style="padding:2rem;text-align:center;background:#1f2937;border-radius:8px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF0000" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg><p style="color:#aaa;margin-top:0.5rem;">YouTube Video</p></div>`;
+                    const fallback = document.createElement('div');
+                    fallback.style.padding = '2rem';
+                    fallback.style.textAlign = 'center';
+                    fallback.style.background = '#1f2937';
+                    fallback.style.borderRadius = '8px';
+                    const label = document.createElement('p');
+                    label.style.color = '#aaa';
+                    label.style.marginTop = '0.5rem';
+                    label.textContent = 'YouTube Video';
+                    fallback.appendChild(label);
+                    preview.appendChild(fallback);
                 }
             } else if (type === 'video' || url.match(/\.(mp4|webm|ogg|mov|mkv)(\?.*)?$/i)) {
-                preview.innerHTML = `<video src="${url}" class="media-preview-lg" controls></video>`;
+                const video = document.createElement('video');
+                video.className = 'media-preview-lg';
+                video.controls = true;
+                video.src = resolvedUrl;
+                preview.appendChild(video);
             } else {
-                preview.innerHTML = `<img src="${url}" class="media-preview-lg" alt="Preview">`;
+                const img = document.createElement('img');
+                img.className = 'media-preview-lg';
+                img.alt = 'Preview';
+                img.src = resolvedUrl;
+                preview.appendChild(img);
             }
 
             const boardsList = document.getElementById('publishBoardsList');
@@ -671,10 +744,10 @@
             } else {
                 boardsList.innerHTML = allBoards.map((board) => `
                     <label class="board-checkbox">
-                        <input type="checkbox" name="boards" value="${board.boardId}">
+                        <input type="checkbox" name="boards" value="${esc(board.boardId)}">
                         <div>
-                            <strong>${board.boardId}</strong>
-                            <small style="display:block;color:var(--gray);">Room: ${board.roomNumber}</small>
+                            <strong>${esc(board.boardId)}</strong>
+                            <small style="display:block;color:var(--gray);">Room: ${esc(board.roomNumber)}</small>
                         </div>
                     </label>
                 `).join('');

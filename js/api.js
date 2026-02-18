@@ -1,236 +1,12 @@
-// ===== Audit Store (Front-end Only, No Backend Changes) =====
+// ===== Audit Store Compatibility Layer =====
+// Audit history is now server-side. Keep this object to avoid breaking old callers.
 (function () {
-    const STORAGE_KEY = 'SMART_BOARD_AUDIT_LOGS';
-    const MAX_LOGS = 1500;
-
-    function safeJsonParse(value, fallback) {
-        try {
-            return JSON.parse(value);
-        } catch (error) {
-            return fallback;
-        }
-    }
-
-    function loadLogs() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const parsed = safeJsonParse(raw, []);
-        return Array.isArray(parsed) ? parsed : [];
-    }
-
-    function saveLogs(logs) {
-        const next = Array.isArray(logs) ? logs.slice(0, MAX_LOGS) : [];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        return next;
-    }
-
-    function createId() {
-        return `log_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
-    }
-
-    function normalizeType(value) {
-        const raw = String(value || '').toLowerCase().trim();
-        if (['system', 'board', 'schedule', 'group', 'content'].includes(raw)) return raw;
-        return 'system';
-    }
-
-    function addEvent(entry) {
-        try {
-            const nowIso = new Date().toISOString();
-            const record = {
-                id: entry && entry.id ? String(entry.id) : createId(),
-                type: normalizeType(entry && entry.type),
-                action: String(entry && entry.action || 'Event'),
-                message: String(entry && entry.message || ''),
-                user: String(entry && entry.user || (typeof getAdminUser === 'function' ? getAdminUser() : 'Admin')),
-                timestamp: String(entry && entry.timestamp || nowIso)
-            };
-
-            const current = loadLogs();
-            const latest = current[0];
-            if (latest) {
-                const same =
-                    String(latest.type) === String(record.type) &&
-                    String(latest.action) === String(record.action) &&
-                    String(latest.message) === String(record.message) &&
-                    String(latest.user) === String(record.user);
-                const ageMs = Math.abs(new Date(record.timestamp).getTime() - new Date(latest.timestamp || 0).getTime());
-                if (same && ageMs < 3000) {
-                    return latest;
-                }
-            }
-            current.unshift(record);
-            saveLogs(current);
-            return record;
-        } catch (error) {
-            return null;
-        }
-    }
-
-    function getLogs() {
-        const logs = loadLogs();
-        return logs.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-    }
-
-    function extractIdFromEndpoint(endpoint) {
-        const parts = String(endpoint || '').split('/').filter(Boolean);
-        return parts.length ? parts[parts.length - 1] : '';
-    }
-
-    function addFromWs(message) {
-        if (!message || !message.type) return;
-        const type = String(message.type || '').toLowerCase();
-        const data = message.data || {};
-
-        if (type === 'board_registered') {
-            addEvent({
-                type: 'board',
-                action: 'Board Registered',
-                message: `Board ${data.boardId || ''}${data.roomNumber ? ` - Room: ${data.roomNumber}` : ''}`
-            });
-            return;
-        }
-        if (type === 'board_online') {
-            addEvent({ type: 'board', action: 'Board Online', message: `Board ${data.boardId || ''} connected` });
-            return;
-        }
-        if (type === 'board_offline') {
-            addEvent({ type: 'board', action: 'Board Offline', message: `Board ${data.boardId || ''} disconnected` });
-            return;
-        }
-        if (type === 'board_removed') {
-            addEvent({ type: 'board', action: 'Board Removed', message: `Board ${data.boardId || ''} removed` });
-            return;
-        }
-
-        if (type === 'notice_created') {
-            const moduleType = String(data.moduleType || '').toLowerCase();
-            addEvent({
-                type: 'schedule',
-                action: moduleType === 'media' ? 'Media Scheduled' : 'Marquee Scheduled',
-                message: data.title ? `Title: ${data.title}` : 'New schedule created'
-            });
-            return;
-        }
-        if (type === 'notice_updated') {
-            addEvent({ type: 'schedule', action: 'Schedule Updated', message: data.scheduleId ? `ID: ${data.scheduleId}` : '' });
-            return;
-        }
-        if (type === 'notice_deleted') {
-            addEvent({ type: 'schedule', action: 'Schedule Deleted', message: data.scheduleId ? `ID: ${data.scheduleId}` : '' });
-            return;
-        }
-
-        if (type.startsWith('quote_')) {
-            const actionMap = {
-                quote_created: 'Quote Created',
-                quote_updated: 'Quote Updated',
-                quote_deleted: 'Quote Deleted',
-                quote_bulk_added: 'Bulk Quotes Imported'
-            };
-            addEvent({
-                type: 'content',
-                action: actionMap[type] || 'Quote Event',
-                message: data && data.quoteId ? `Quote ID: ${data.quoteId}` : (data && data.count ? `Count: ${data.count}` : '')
-            });
-        }
-    }
-
-    function addFromApi(method, endpoint, requestBody, responseJson) {
-        const m = String(method || '').toUpperCase();
-        if (m === 'GET') return;
-        const ep = String(endpoint || '');
-        const success = responseJson && responseJson.success === true;
-
-        // Boards
-        if (m === 'DELETE' && ep.startsWith('/boards/')) {
-            const boardId = extractIdFromEndpoint(ep);
-            addEvent({
-                type: 'board',
-                action: success ? 'Board Removed' : 'Board Remove Failed',
-                message: boardId ? `Board ${boardId}` : ''
-            });
-            return;
-        }
-
-        // Marquee / Media schedule create
-        if (m === 'POST' && ep === '/notice/create') {
-            const moduleType = String(requestBody && requestBody.moduleType || '').toLowerCase();
-            addEvent({
-                type: 'schedule',
-                action: success ? (moduleType === 'media' ? 'Media Scheduled' : 'Marquee Scheduled') : 'Schedule Publish Failed',
-                message: requestBody && requestBody.title ? `Title: ${requestBody.title}` : ''
-            });
-            return;
-        }
-
-        // Schedules toggle/update/delete
-        if ((m === 'PATCH' || m === 'PUT') && ep.startsWith('/schedules/')) {
-            addEvent({
-                type: 'schedule',
-                action: success ? 'Schedule Updated' : 'Schedule Update Failed',
-                message: ep.includes('/toggle') ? 'Toggle changed' : `Endpoint: ${ep}`
-            });
-            return;
-        }
-        if (m === 'DELETE' && ep.startsWith('/schedules/')) {
-            addEvent({
-                type: 'schedule',
-                action: success ? 'Schedule Deleted' : 'Schedule Delete Failed',
-                message: `Endpoint: ${ep}`
-            });
-            return;
-        }
-
-        // Media library
-        if (m === 'POST' && ep === '/media/upload') {
-            addEvent({
-                type: 'content',
-                action: success ? 'Media Uploaded' : 'Media Upload Failed',
-                message: success && responseJson.media && responseJson.media.pathOrUrl ? String(responseJson.media.pathOrUrl) : ''
-            });
-            return;
-        }
-        if (m === 'POST' && ep === '/media/url') {
-            addEvent({
-                type: 'content',
-                action: success ? 'Media URL Added' : 'Media URL Add Failed',
-                message: requestBody && requestBody.url ? String(requestBody.url) : ''
-            });
-            return;
-        }
-        if (m === 'DELETE' && ep.startsWith('/media/')) {
-            addEvent({
-                type: 'content',
-                action: success ? 'Media Deleted' : 'Media Delete Failed',
-                message: `ID: ${extractIdFromEndpoint(ep)}`
-            });
-            return;
-        }
-
-        // Quotes
-        if (ep.startsWith('/quotes')) {
-            const action =
-                m === 'POST' && ep === '/quotes' ? 'Quote Added' :
-                    m === 'POST' && ep === '/quotes/bulk' ? 'Bulk Quotes Imported' :
-                        m === 'PUT' ? 'Quote Updated' :
-                            m === 'PATCH' ? 'Quote Updated' :
-                                m === 'DELETE' ? 'Quote Deleted' :
-                                    'Quote Event';
-            addEvent({
-                type: 'content',
-                action: success ? action : `${action} Failed`,
-                message: ''
-            });
-        }
-    }
-
     window.auditStore = {
-        STORAGE_KEY,
-        addEvent,
-        getLogs,
-        addFromWs,
-        addFromApi,
-        clear: () => saveLogs([])
+        addEvent: () => null,
+        getLogs: () => [],
+        addFromWs: () => { },
+        addFromApi: () => { },
+        clear: () => { }
     };
 })();
 
@@ -250,6 +26,68 @@ const API_REQUEST_TIMEOUT_MS = 12000;
 const API_UPLOAD_TIMEOUT_MS = 30000;
 const API_GET_RETRIES = 1;
 const API_RETRY_DELAY_MS = 650;
+const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken';
+const ADMIN_LOGGED_IN_KEY = 'adminLoggedIn';
+const ADMIN_USER_KEY = 'adminUser';
+const ADMIN_LOGIN_TIME_KEY = 'loginTime';
+const ADMIN_LAST_ACTIVITY_KEY = 'adminLastActivity';
+const ADMIN_SESSION_EXPIRES_KEY = 'adminSessionExpiresAt';
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getAdminAuthToken() {
+    return String(sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || '').trim();
+}
+
+function clearAdminSessionStorage() {
+    sessionStorage.removeItem(ADMIN_LOGGED_IN_KEY);
+    sessionStorage.removeItem(ADMIN_USER_KEY);
+    sessionStorage.removeItem(ADMIN_LOGIN_TIME_KEY);
+    sessionStorage.removeItem(ADMIN_LAST_ACTIVITY_KEY);
+    sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(ADMIN_SESSION_EXPIRES_KEY);
+}
+
+let unauthorizedHandled = false;
+function handleUnauthorized(message) {
+    if (unauthorizedHandled) return;
+    unauthorizedHandled = true;
+    clearAdminSessionStorage();
+    try {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+            ws.close();
+        }
+    } catch (error) {
+        // Ignore socket close errors during logout redirect.
+    }
+
+    const pathname = String(window.location.pathname || '').toLowerCase();
+    const isLoginPage = pathname.endsWith('/login.html') || pathname.endsWith('login.html');
+    if (!isLoginPage) {
+        if (message) {
+            try {
+                showToast(message, 'error');
+            } catch (error) {
+                // Ignore toast errors during redirect.
+            }
+        }
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 50);
+    }
+}
+
+window.escapeHtml = escapeHtml;
+window.getAdminAuthToken = getAdminAuthToken;
+window.clearAdminSessionStorage = clearAdminSessionStorage;
+window.handleUnauthorized = handleUnauthorized;
 
 function getAutoRefreshInterval() {
     if (typeof getAdminSettings === 'function') {
@@ -335,16 +173,22 @@ async function requestJson(endpoint, options = {}) {
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
+            const token = getAdminAuthToken();
             const fetchOptions = {
                 method: upperMethod,
-                signal: controller.signal
+                signal: controller.signal,
+                headers: {}
             };
 
             if (formData) {
                 fetchOptions.body = formData;
             } else if (data !== undefined) {
-                fetchOptions.headers = { 'Content-Type': 'application/json' };
+                fetchOptions.headers['Content-Type'] = 'application/json';
                 fetchOptions.body = JSON.stringify(data);
+            }
+
+            if (token) {
+                fetchOptions.headers.Authorization = `Bearer ${token}`;
             }
 
             const response = await fetch(url, fetchOptions);
@@ -368,6 +212,12 @@ async function requestJson(endpoint, options = {}) {
             }
             if (!response.ok) {
                 json.success = false;
+                if (response.status === 401 || response.status === 403) {
+                    const isAuthRoute = String(endpoint || '').startsWith('/admin/login');
+                    if (!isAuthRoute) {
+                        handleUnauthorized('Session expired. Please log in again.');
+                    }
+                }
                 if (!json.error) {
                     json.error = `Request failed (${response.status})`;
                 }
@@ -470,6 +320,7 @@ const WS_RECONNECT_MAX_DELAY_MS = 15000;
 let wsReconnectTimer = null;
 
 function scheduleWebSocketReconnect() {
+    if (!getAdminAuthToken()) return;
     if (wsReconnectTimer) return;
 
     const delay = wsReconnectDelayMs;
@@ -486,6 +337,11 @@ function scheduleWebSocketReconnect() {
 
 function connectWebSocket() {
     try {
+        const token = getAdminAuthToken();
+        if (!token) {
+            return;
+        }
+
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
             return;
         }
@@ -494,7 +350,11 @@ function connectWebSocket() {
 
         ws.onopen = () => {
             wsReconnectDelayMs = 2000;
-            console.log('WebSocket connected');
+            ws.send(JSON.stringify({
+                type: 'auth',
+                token
+            }));
+            console.log('WebSocket connected, auth sent');
         };
 
         ws.onmessage = (event) => {
@@ -504,6 +364,11 @@ function connectWebSocket() {
             } catch (parseError) {
                 return;
             }
+
+            if (data && data.type === 'auth_ok') {
+                return;
+            }
+
             if (window.auditStore && typeof window.auditStore.addFromWs === 'function') {
                 window.auditStore.addFromWs(data);
             }
@@ -519,7 +384,16 @@ function connectWebSocket() {
             }
         };
 
-        ws.onclose = () => {
+        ws.onclose = (event) => {
+            const reason = String(event && event.reason || '');
+            const isUnauthorized = (event && event.code === 1008)
+                && (reason.toLowerCase().includes('unauthorized') || reason.toLowerCase().includes('authentication'));
+
+            if (isUnauthorized) {
+                handleUnauthorized('Session expired. Please log in again.');
+                return;
+            }
+
             console.log('WebSocket disconnected, reconnecting...');
             scheduleWebSocketReconnect();
         };

@@ -144,6 +144,13 @@
             .replace(/'/g, '&#39;');
     }
 
+    function escapeJsSingleQuoted(value) {
+        return String(value || '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r?\n/g, ' ');
+    }
+
     function t(key, vars) {
         const dict = I18N[UI_LANG] || I18N.en;
         let text = String(dict[key] || I18N.en[key] || '');
@@ -487,7 +494,7 @@
             <button
                 type="button"
                 class="template-filter-btn ${selectedCategory === category ? 'active' : ''}"
-                onclick="setCategoryFilter('${category}')"
+                onclick="setCategoryFilter('${escapeJsSingleQuoted(category)}')"
             >
                 ${escapeHtml(labelCategory(category))}
             </button>
@@ -517,6 +524,7 @@
             const priorityClass = template.priority === 'emergency' ? 'emergency' : '';
             const priorityLabel = template.priority === 'emergency' ? t('priorityEmergency') : t('priorityNormal');
 
+            const safeTemplateId = escapeJsSingleQuoted(String(template.templateId || ''));
             return `
                 <article class="template-card">
                     <div class="template-head">
@@ -535,9 +543,9 @@
                             <span class="template-dot ${priorityClass}"></span>${escapeHtml(priorityLabel)}
                         </span>
                         <div class="template-actions">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="useTemplate('${template.templateId}')">${escapeHtml(t('useTemplate'))}</button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openTemplateModal('${template.templateId}')">${escapeHtml(t('edit'))}</button>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="removeTemplate('${template.templateId}')">${escapeHtml(t('delete'))}</button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="useTemplate('${safeTemplateId}')">${escapeHtml(t('useTemplate'))}</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="openTemplateModal('${safeTemplateId}')">${escapeHtml(t('edit'))}</button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="removeTemplate('${safeTemplateId}')">${escapeHtml(t('delete'))}</button>
                         </div>
                     </div>
                 </article>

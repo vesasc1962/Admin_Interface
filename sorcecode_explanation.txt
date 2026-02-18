@@ -1,0 +1,517 @@
+SmartBoard Admin System - Source Code Explanation & Security Review
+===============================================================
+
+Last reviewed: 2026-02-18
+Scope: This document explains the Admin Web Application contained in this repository (HTML/CSS/JS).
+       It also describes the expected backend security behavior where required to explain authentication,
+       password storage, session management, and API authorization. Backend implementation is not part
+       of this repository and must be reviewed/deployed separately in institutional environments.
+
+SECURITY RULE (applies to this document):
+- No credentials, secrets, API keys, tokens, or secret configuration values are included.
+
+
+1) Project Overview (Technical, Not Marketing)
+----------------------------------------------
+
+What the system does
+- Provides an administrative web interface to manage content shown on SmartBoard-style digital display devices.
+- Admins can:
+  - Register/monitor boards (online/offline).
+  - Create and schedule notices (including emergency notices).
+  - Upload or reference media (images/videos/URLs) and schedule publishing.
+  - Maintain quote and template libraries.
+  - View analytics and audit logs.
+  - Configure runtime settings (server URL, refresh interval, UI preferences) and rotate admin password.
+
+Who uses it (Admin vs Boards)
+- Admin user:
+  - Uses this web app to authenticate and manage all publishing actions.
+- Display boards:
+  - Authenticate separately (board identity) and poll for active content.
+  - Boards are not expected to access the Admin UI.
+
+What data it handles (and what it does NOT handle)
+- Data handled by the Admin UI:
+  - Administrative credentials (entered at login; never stored as raw passwords in this UI).
+  - Session token (stored in browser sessionStorage).
+  - Board inventory metadata: board ID, room number, status/last-seen timestamps.
+  - Notice/schedule content authored by admins (titles, plain-text body, priority, targets, start/end times).
+  - Media library metadata: stored file paths or external URLs, media type, upload timestamps.
+  - Quotes and notice templates (template text, category, translations).
+  - Audit log entries returned by the backend.
+- What it does NOT handle by design:
+  - Student academic records (grades, transcripts).
+  - Student authentication credentials (no campus SSO credentials are stored here).
+  - Database access to institutional SIS/LMS systems.
+
+Important clarification:
+- The system can still display content that contains student-related information if an administrator enters it.
+  Institutions should treat notice content as potentially sensitive and apply appropriate policy and review.
+
+
+2) Complete Source Code Transparency (Admin App)
+------------------------------------------------
+
+2.1 Frontend structure (static multi-page app)
+- The Admin app is a static site: multiple HTML pages + shared CSS + shared JS helpers.
+- Primary pages (repository root):
+  - login.html: Admin login UI and session bootstrap.
+  - index.html: Dashboard summary (boards online/offline, active notices).
+  - boards.html: Board list, status, removal.
+  - create-notice.html: Notice creation wizard (targets, schedule window, priority).
+  - schedules.html: List/toggle/delete marquee schedules.
+  - media.html: Upload media / add media URL / publish media schedules.
+  - quotes.html: Quote CRUD and enable/disable.
+  - templates.html: Template management UI.
+  - audit-log.html: Backend audit log viewer with filtering.
+  - analytics.html: Aggregated metrics view.
+  - settings.html: Server configuration, UI toggles, notifications, password rotation, session timeout.
+
+2.2 Shared UI and styling
+- css/style.css: global style system and UI components (cards, tables, buttons, badges).
+- js/header.js:
+  - Injects a consistent top header across pages (except login).
+  - Adds sidebar section labels and a sign-out control.
+  - Uses escapeHtml before inserting any session-derived user display values into HTML.
+- js/theme.js:
+  - Applies theme settings (light/dark), animations, and compact mode using persisted settings.
+
+2.3 Configuration and state handling
+
+Runtime configuration (server URLs and refresh interval)
+- js/config.js is the single source of truth for:
+  - API server origin (SERVER_URL)
+  - WebSocket origin (WS_URL)
+  - Auto-refresh interval (AUTO_REFRESH_INTERVAL)
+- Configuration precedence:
+  1) Query string override (session-scoped by default):
+     - ?server=https://example-origin and optional ?ws=wss://example-origin
+     - Stored only in sessionStorage unless explicitly persisted.
+  2) sessionStorage (tab-scoped override):
+     - Used to keep a query override across page navigations in the same browser tab.
+  3) localStorage persisted settings:
+     - Settings saved via the Settings page.
+  4) Safe defaults:
+     - Defaults to localhost development origin unless configured.
+
+Persistence
+- localStorage:
+  - SMART_BOARD_APP_SETTINGS:
+    - SERVER_URL / WS_URL / AUTO_REFRESH_INTERVAL
+    - UI preferences (dark mode, animations, compact mode)
+    - notification toggles
+    - session timeout minutes
+    - serverUrlPinned (indicates explicit operator selection of server URL)
+  - SMART_BOARD_SERVER_URL:
+    - legacy key retained for backward compatibility.
+- sessionStorage:
+  - SMART_BOARD_SESSION_SETTINGS:
+    - Tab-only server override (SERVER_URL/WS_URL) to reduce the risk of a malicious link permanently re-pointing the UI.
+
+Why sessionStorage matters (security)
+- A one-click link should not permanently change the backend server used by this Admin UI.
+- Session-only overrides reduce the persistence of phishing-style "connect to my server" attacks.
+
+Other client-side state
+- sessionStorage session keys (Admin auth session):
+  - adminAuthToken (Bearer token)
+  - adminLoggedIn, adminUser, loginTime, adminLastActivity, adminSessionExpiresAt
+- localStorage group key:
+  - smartboard_groups: Groups are currently client-only (not enforced by backend authorization).
+    This must be treated as a UI convenience, not a security boundary.
+- localStorage template store:
+  - SMART_BOARD_NOTICE_TEMPLATES: Template content library for notice creation.
+
+2.4 Authentication flow (Admin)
+
+Login (login.html)
+- The login form sends a POST request to /api/admin/login with JSON:
+  - { userId, password }
+- On success, the backend returns:
+  - a high-entropy session token (Bearer token) and metadata (userId, expiry timestamps).
+- The token is stored in sessionStorage (not localStorage) so it is removed when the browser tab closes.
+
+Auth guard (js/auth.js)
+- Runs on every page except login.html.
+- Enforces:
+  1) Presence of adminLoggedIn=true and adminAuthToken in sessionStorage.
+  2) Local inactivity timeout:
+     - Uses adminLastActivity timestamps and a configurable sessionTimeoutMinutes (min/max bounded).
+  3) Server-side session verification:
+     - Calls GET /api/admin/session with Authorization: Bearer <token>.
+     - If backend responds 401/403, the UI clears session and redirects to login.
+
+Logout
+- js/auth.js exposes adminLogout():
+  - Sends POST /api/admin/logout with Authorization header.
+  - Clears sessionStorage keys and redirects to login.html regardless of network success.
+
+Session expiration behavior (UI vs backend)
+- UI:
+  - Inactivity-based logout is enforced locally via event listeners (click/keydown/mousemove/scroll/touchstart).
+- Backend (expected):
+  - Server-side TTL and validation ensure tokens expire even if the UI does not (defense-in-depth).
+
+2.5 API communication (REST)
+
+API helper (js/api.js)
+- Determines API_BASE from js/config.js runtime settings.
+- requestJson():
+  - Adds Authorization: Bearer <token> automatically when present.
+  - Uses AbortController timeouts to avoid hanging requests.
+  - Parses responses as JSON (with safe fallback error messages).
+  - On 401/403 (non-login routes), calls handleUnauthorized() which clears session and redirects to login.
+- Methods:
+  - api.get / api.post / api.put / api.patch / api.delete / api.upload
+- Uploads:
+  - api.upload uses FormData and a longer timeout budget.
+
+Output encoding and XSS safety (client side)
+- js/api.js provides escapeHtml() and multiple pages implement local esc() wrappers.
+- The UI avoids inserting untrusted strings as raw HTML where possible:
+  - Prefer textContent over innerHTML.
+  - Where innerHTML is used for rendering tables/cards, strings are escaped first.
+
+2.6 WebSocket usage (real-time events)
+
+WebSocket client (js/api.js)
+- Connection:
+  - new WebSocket(WS_URL)
+  - On open, sends JSON: { type: "auth", token: <adminToken> }
+- Authorization:
+  - Backend must accept WebSocket only after token validation.
+- Message handling:
+  - Dispatches parsed messages to registered listeners (addWSListener()).
+  - Triggers UI to refresh on relevant events (board status changes, notice changes, media changes, etc.).
+- Reconnect strategy:
+  - Exponential backoff with bounded maximum delay.
+  - If backend closes with an authentication-related close code/reason, the UI treats it as session expiration.
+
+2.7 Role boundaries (Admin vs Display Boards)
+- This Admin UI uses admin-only endpoints under /api/admin/* and admin-protected endpoints under /api/*.
+- Display boards authenticate and call board-specific endpoints (separate token and separate middleware).
+- Practical boundary:
+  - Compromise of a single board token should not grant admin privileges.
+  - Compromise of an admin token grants administrative control (publishing notices, media, etc.).
+
+
+3) Threat Model (Critical)
+--------------------------
+
+This section assumes a realistic institutional deployment:
+- The Admin UI is served over HTTPS (or localhost for development).
+- The backend is reachable only by approved networks/origins, and is also HTTPS in production.
+
+Threat: Unauthorized admin access (credential compromise / password guessing)
+- Is it possible?
+  - Yes. Any Internet-exposed login can be targeted with guessing, credential stuffing, or phishing.
+- What prevents it?
+  - Strong password policy (minimum complexity required by the UI and expected backend).
+  - Rate limiting / lockout behavior in the backend (expected).
+  - Audit logging of login failures/successes (expected).
+- What limits damage if it occurs?
+  - Session TTL and inactivity timeouts reduce time window for a stolen session.
+  - Actions are auditable (who did what, when, from where) if audit logs are protected.
+- Residual risk
+  - Without MFA/SSO, a single password is a single point of failure.
+
+Threat: Password theft attempts (network interception, client compromise, server compromise)
+- Is it possible?
+  - Network interception is possible if HTTP (not HTTPS) is used anywhere in production.
+  - Client compromise is possible if the admin workstation is malware-infected.
+  - Server compromise is possible if backend host is not hardened.
+- What prevents it?
+  - HTTPS/TLS for Admin UI + backend API (deployment requirement).
+  - Raw passwords are not stored in the Admin UI; the UI only transmits during login/password-change.
+  - Backend must store only salted password hashes (expected).
+- What limits damage if it occurs?
+  - Password hashing slows offline cracking if a credential file is stolen.
+  - Rate limiting slows online guessing.
+
+Threat: Session hijacking (token theft)
+- Is it possible?
+  - Yes if:
+    - An attacker can run JavaScript in the admin origin (XSS), or
+    - The admin device is compromised, or
+    - Tokens are leaked via logs/diagnostics.
+- What prevents it?
+  - Token stored in sessionStorage (not persistent across browser restarts; reduces accidental exposure).
+  - Backend should validate token TTL and optionally bind sessions to user-agent and/or IP.
+- What limits damage if it occurs?
+  - Backend session TTL and server-side invalidation on logout.
+  - UI inactivity timeout forces local logout even if the server session is still alive.
+- Residual risk
+  - XSS remains the highest impact risk for any token-in-browser architecture.
+
+Threat: XSS (Cross-Site Scripting)
+- Is it possible?
+  - Possible if untrusted data is inserted into the DOM as HTML without escaping, or if a future feature
+    introduces rich HTML input without sanitization.
+- What prevents it today?
+  - The UI uses escaping functions (escapeHtml/esc) for dynamic table/card rendering.
+  - Many parts of the UI use textContent for untrusted strings.
+  - Backend is expected to sanitize stored notice text to plain text (no raw HTML).
+- What limits damage if it occurs?
+  - No long-lived tokens in localStorage (sessionStorage only).
+  - Server-side TTL shortens the token lifetime.
+- Residual risk
+  - Inline scripts reduce the ability to deploy a strict CSP without refactoring.
+  - Security headers (CSP, HSTS, etc.) must be added by the hosting layer.
+
+Threat: CSRF (Cross-Site Request Forgery)
+- Is it possible?
+  - Low in the current design if the backend uses Authorization: Bearer tokens (not cookies).
+  - A third-party site cannot force a browser to send Authorization headers without CORS preflight success.
+- What prevents it?
+  - Token-based Authorization header.
+  - Backend CORS origin enforcement (expected) blocks cross-origin browser calls.
+- What limits damage if it occurs?
+  - Even if a request were sent, it must include a valid token.
+- Residual risk
+  - If the backend ever switches to cookie-based sessions, CSRF tokens must be added.
+
+Threat: API misuse and privilege escalation
+- Is it possible?
+  - Possible if backend endpoints fail to enforce admin authentication consistently.
+- What prevents it?
+  - Backend must require admin auth middleware for all admin-sensitive endpoints.
+  - The Admin UI always attaches the Bearer token; unauthenticated calls are rejected.
+- What limits damage if it occurs?
+  - Rate limiting can cap request volume.
+  - Audit logs can surface misuse.
+
+Threat: WebSocket abuse (unauthorized subscription, message injection, DoS)
+- Is it possible?
+  - Unauthorized subscription is possible if backend does not enforce auth before sending events.
+  - DoS is possible on any network-exposed socket if not protected.
+- What prevents it?
+  - Client sends token in an auth message; backend must close unauthenticated sockets quickly.
+  - Backend should revalidate sessions periodically and close unauthorized sockets.
+- What limits damage if it occurs?
+  - Token TTL and session invalidation.
+  - Rate limiting and network-level protections (reverse proxy/WAF) for connection floods.
+
+Threat: Brute force login attempts
+- Is it possible?
+  - Yes on any exposed login endpoint.
+- What prevents it?
+  - Backend rate limiting and lockout windows (expected).
+  - Strong password policy reduces the probability of success.
+- What limits damage if it occurs?
+  - Audit logs allow incident response (block offending IPs, review attempts).
+
+Threat: Insider misuse (authorized admin acting maliciously or negligently)
+- Is it possible?
+  - Yes; an authenticated admin can publish emergency notices, misleading content, or privacy-unsafe content.
+- What prevents it?
+  - Process controls (policy), separation of duties, and multi-admin roles (future improvement).
+  - Audit log visibility and retention.
+- What limits damage if it occurs?
+  - Emergency content can be revoked/disabled.
+  - Audit logs provide accountability when protected.
+
+Threat: Public deployment risks (Admin UI hosted publicly)
+- Is it possible?
+  - Yes. Public hosting increases phishing and enumeration risk (attackers can study UI and endpoints).
+- What prevents it?
+  - No secrets are embedded in the Admin UI repository.
+  - Backend must still require authentication and enforce rate limits.
+  - Institutional access controls (VPN, IP allowlists, SSO) can further restrict access.
+- What limits damage if it occurs?
+  - Without a valid token, the UI cannot access protected endpoints.
+
+Threat: Network-level threats (MITM, DNS poisoning, hostile Wi-Fi)
+- Is it possible?
+  - Yes if HTTPS is not enforced end-to-end.
+- What prevents it?
+  - HTTPS/TLS, HSTS, correct certificate management, and secure DNS practices (deployment responsibility).
+- What limits damage if it occurs?
+  - Short session TTLs and fast revocation reduce exposure window.
+
+
+4) Password & Credential Security
+---------------------------------
+
+How passwords are stored (hashing, salting)
+- The Admin UI never stores raw passwords at rest.
+- Password storage is a backend responsibility.
+- Expected/required backend behavior for institutional approval:
+  - Store passwords only as salted, slow hashes (e.g., PBKDF2/bcrypt/scrypt/Argon2).
+  - Use a unique random salt per password.
+  - Use constant-time comparison for verification.
+
+Why raw passwords are never stored
+- Raw passwords provide immediate compromise value if logs/files are accessed.
+- Proper salted hashing ensures a stolen credential store requires expensive offline cracking.
+
+How admin authentication is protected (end-to-end)
+- Admin UI:
+  - Transmits credentials only to the backend login endpoint.
+  - Stores only the returned session token in sessionStorage.
+  - Sends the token in Authorization headers for all protected requests.
+- Backend (required):
+  - Validate credentials against a salted password hash.
+  - Enforce rate limits and lockouts to reduce brute force success.
+  - Issue high-entropy session tokens and validate them server-side on each request.
+
+How session expiration works
+- UI:
+  - Local inactivity timer clears sessionStorage after configurable minutes of inactivity.
+- Backend:
+  - Server-side TTL must expire tokens regardless of client state.
+  - Optionally bind sessions to user-agent and/or IP to reduce token replay risk.
+
+Why a breach does NOT expose all college credentials
+- This system is not designed to store campus-wide identities or academic records.
+- A breach of this Admin UI repository does not expose backend passwords because none are stored here.
+- A breach of the backend credential store should expose only salted password hashes (not raw passwords),
+  and should not contain student credentials.
+
+If anything is missing or weak (and fixes)
+- Missing: MFA/SSO for admin login.
+  - Fix: Integrate with institutional identity provider (SAML/OIDC) and enforce MFA.
+- Weakness: If the backend stores credentials in local files, filesystem permissions and backups must be hardened.
+  - Fix: Restrict OS-level access, encrypt at rest, and centralize secrets in an approved secrets manager.
+
+
+5) Data Safety & Privacy Guarantees
+-----------------------------------
+
+What student data is stored
+- By design, the system does not require or model per-student academic records.
+- The only student-related information that might exist is whatever an admin types into notice content
+  (free-form text) or uploads as media.
+
+What is NOT stored
+- No grades, transcripts, attendance records, or SIS/LMS credentials are part of this system.
+- No integration to a student database is present in this Admin UI.
+
+Why the system cannot leak academic records (under stated assumptions)
+- The Admin UI has no code paths to query institutional academic systems.
+- Backend endpoints consumed by this UI are focused on:
+  - Board inventory, schedules/notices, media, quotes, audit logs.
+
+Separation between notice display and admin control
+- Boards authenticate with their own board identity and session token to fetch content.
+- Admins authenticate separately and can create/update schedules.
+- Board tokens must not be accepted for admin endpoints, and admin tokens should not be accepted for board endpoints.
+
+
+6) Public Repository Safety Justification
+-----------------------------------------
+
+Why publishing ONLY the Admin App is safe (when done correctly)
+- This repository contains only:
+  - Static HTML/CSS/JS frontend code.
+  - No backend credential files, no data directory, and no server-side secrets.
+- Backend deployment secrets (credentials, allowed origins, network exposure settings) must be external to the repo.
+- The Admin UI is not useful to an attacker without a reachable backend and valid credentials.
+
+What is excluded from this repository (must remain private)
+- Backend service code/binaries and all backend data stores (credentials, audit logs, schedules, uploads).
+- Any production deployment configuration (credentials, private URLs, tunnels, certificates).
+
+How production systems remain protected
+- Host the backend behind institutional controls:
+  - TLS termination, firewalling, and optional VPN.
+  - Explicit allowlists for the Admin UI origin and/or admin IP ranges.
+  - Central logging/monitoring and incident response procedures.
+
+
+7) Known Risks (Honest Section)
+-------------------------------
+
+Risk: Token-in-browser + XSS impact
+- Impact:
+  - If XSS occurs on the Admin origin, an attacker can read sessionStorage and steal the admin token.
+- Current mitigations:
+  - Output escaping in the UI, backend sanitization of stored text, sessionStorage-only token storage.
+- Further mitigation roadmap:
+  - Deploy a strict CSP (requires refactoring inline scripts).
+  - Add security headers at the hosting layer.
+
+Risk: Public hosting increases phishing risk
+- Impact:
+  - Attackers can more easily build convincing phishing pages or links.
+- Mitigations:
+  - Prefer institutional SSO + MFA.
+  - Educate admins: verify URL, use bookmarks, avoid unknown links.
+  - Restrict access with VPN/IP allowlists where feasible.
+
+Risk: Client-side "groups" are not a security boundary
+- Impact:
+  - Group membership is stored in localStorage and can be edited by the admin browser.
+  - It is not shared across admins and is not auditable server-side.
+- Mitigation:
+  - Move groups to backend storage with admin authorization and audit logs.
+
+Risk: Media safety (untrusted uploads/URLs)
+- Impact:
+  - Uploading or embedding untrusted media can create content safety or privacy problems.
+- Mitigation:
+  - Add content scanning and file-type verification server-side.
+  - Consider restricting SVG and external URLs in high-security deployments.
+
+Risk: Audit log tamper resistance depends on storage controls
+- Impact:
+  - If an attacker gains filesystem access, they may delete or alter logs.
+- Mitigation:
+  - Export audit logs to append-only/remote storage (SIEM/WORM) and alert on gaps.
+
+
+8) Improvements & Hardening Checklist
+-------------------------------------
+
+Authentication and access control
+- Add institutional SSO (OIDC/SAML) + MFA for admins.
+- Add multiple admin accounts with RBAC (least privilege) and separation of duties.
+- Add device/IP allowlisting for admin login if appropriate for colleges.
+
+Rate limiting and abuse protection
+- Keep backend rate limits for login and admin endpoints; add edge-level rate limiting (reverse proxy/WAF).
+- Add alerting on repeated failures and unusual publishing volume.
+
+Session security
+- Keep short server-side session TTLs and require re-authentication for sensitive actions (e.g., emergency publish).
+- Consider optional IP binding in environments with stable admin networks.
+
+XSS hardening
+- Refactor inline scripts into external JS files and deploy a strict CSP (no unsafe-inline).
+- Adopt a consistent rendering pattern: never insert untrusted strings with innerHTML.
+
+Audit log integrity and monitoring
+- Store audit logs in a centralized logging system with immutable retention policies.
+- Add dashboards/alerts for:
+  - failed logins, password changes, emergency publishes, board removals.
+
+Data protection and privacy
+- Enforce content guidelines to prevent PII in notices unless explicitly required.
+- Encrypt backend data at rest and restrict OS-level access.
+- Backups: encrypted, access-controlled, and tested restore procedures.
+
+Deployment best practices for colleges
+- Enforce HTTPS everywhere (Admin UI and backend API).
+- Add secure headers on the Admin UI host (CSP, HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy).
+- Keep backend off the public Internet when feasible (VPN or private network), or strictly firewall it.
+
+
+9) Final Professional Statement
+-------------------------------
+
+Based on the Admin UI source code in this repository, the application follows a straightforward and
+auditable architecture: static pages, explicit authentication, token-based API access, and safe output
+encoding practices to reduce XSS risk. The design is appropriate for institutional use provided the
+backend service is deployed with standard security controls (TLS, hardened host, rate limiting, secure
+password hashing, protected audit logs, and restricted network exposure).
+
+Assumptions that must hold for institutional approval:
+- The backend enforces authentication/authorization on all admin endpoints.
+- All production traffic uses HTTPS/TLS end-to-end.
+- Deployment teams protect backend data at rest and maintain secure operational practices.
+
+Responsibilities remaining with deployment teams:
+- Identity governance (MFA/SSO, admin account management).
+- Network controls (firewalls, allowlists, VPN where required).
+- Monitoring, logging, incident response, and secure backup/restore.
+

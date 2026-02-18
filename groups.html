@@ -192,6 +192,18 @@
         let boards = [];
         let editingId = null;
 
+        function esc(value) {
+            if (typeof window.escapeHtml === 'function') {
+                return window.escapeHtml(value);
+            }
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         async function loadData() {
             // Load boards
             try {
@@ -228,20 +240,22 @@
                     </tr>
                 `;
             } else {
-                tbody.innerHTML = groups.map(g => `
+                tbody.innerHTML = groups.map((g) => {
+                    const groupId = String(g.id || '').replace(/[^A-Za-z0-9_-]/g, '');
+                    return `
                     <tr>
-                        <td><strong>${g.name}</strong></td>
+                        <td><strong>${esc(g.name)}</strong></td>
                         <td>${g.boardIds.length} board(s)</td>
                         <td>${formatDate(g.createdAt)}</td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn btn-secondary btn-sm" onclick="editGroup('${g.id}')">
+                                <button class="btn btn-secondary btn-sm" onclick="editGroup('${groupId}')">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
                                     </svg>
                                     Edit
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteGroup('${g.id}')">
+                                <button class="btn btn-danger btn-sm" onclick="deleteGroup('${groupId}')">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                                     </svg>
@@ -250,7 +264,8 @@
                             </div>
                         </td>
                     </tr>
-                `).join('');
+                `;
+                }).join('');
             }
         }
 
@@ -262,10 +277,10 @@
             } else {
                 container.innerHTML = boards.map(b => `
                     <label class="board-checkbox ${selectedIds.includes(b.boardId) ? 'selected' : ''}">
-                        <input type="checkbox" value="${b.boardId}" ${selectedIds.includes(b.boardId) ? 'checked' : ''}>
+                        <input type="checkbox" value="${esc(b.boardId)}" ${selectedIds.includes(b.boardId) ? 'checked' : ''}>
                         <div>
-                            <strong>${b.boardId}</strong>
-                            <small style="display:block;color:var(--gray);">Room: ${b.roomNumber}</small>
+                            <strong>${esc(b.boardId)}</strong>
+                            <small style="display:block;color:var(--gray);">Room: ${esc(b.roomNumber)}</small>
                         </div>
                     </label>
                 `).join('');

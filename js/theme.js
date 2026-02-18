@@ -1,12 +1,14 @@
 (function () {
     const SETTINGS_KEY = 'SMART_BOARD_APP_SETTINGS';
+    const APPEARANCE_PREF_KEY = 'appearancePreferenceSet';
     const pathname = String(window.location.pathname || '').toLowerCase();
     const isLoginPage = pathname.endsWith('/login.html') || pathname.endsWith('login.html');
     const root = document.documentElement;
 
     function readSettings() {
-        if (typeof getAdminSettings === 'function') {
-            return getAdminSettings();
+        // Use window.* to avoid relying on global identifier bindings.
+        if (typeof window.getAdminSettings === 'function') {
+            return window.getAdminSettings();
         }
 
         try {
@@ -20,12 +22,19 @@
     }
 
     function persistSettings(partial) {
-        if (typeof updateAdminSettings === 'function') {
-            return updateAdminSettings(partial || {});
+        // Use window.* to avoid relying on global identifier bindings.
+        if (typeof window.updateAdminSettings === 'function') {
+            return window.updateAdminSettings(partial || {});
+        }
+
+        const safePartial = partial && typeof partial === 'object' ? { ...partial } : {};
+        // When persisting dark mode outside of config.js, mark it as an explicit preference.
+        if (Object.prototype.hasOwnProperty.call(safePartial, 'darkMode')) {
+            safePartial[APPEARANCE_PREF_KEY] = true;
         }
 
         const current = readSettings();
-        const merged = { ...current, ...(partial || {}) };
+        const merged = { ...current, ...safePartial };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
         return merged;
     }

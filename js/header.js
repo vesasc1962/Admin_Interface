@@ -9,6 +9,17 @@
 
     const root = document.documentElement;
     const MOBILE_SIDEBAR_QUERY = '(max-width: 1024px)';
+    const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken';
+    const ADMIN_SESSION_EXPIRES_KEY = 'adminSessionExpiresAt';
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     function isElementEmpty(el) {
         if (!el) return true;
@@ -140,14 +151,16 @@
             (typeof window.getAdminUser === 'function' ? window.getAdminUser() : '') ||
             String(sessionStorage.getItem('adminUser') || 'Admin');
         const avatarLetter = adminName ? adminName.charAt(0).toUpperCase() : 'A';
+        const safeAdminName = escapeHtml(adminName);
+        const safeAvatarLetter = escapeHtml(avatarLetter);
 
         const footer = document.createElement('div');
         footer.className = 'sidebar-footer';
         footer.innerHTML = `
             <div class="sidebar-admin-info">
-                <div class="sidebar-admin-avatar">${avatarLetter}</div>
+                <div class="sidebar-admin-avatar">${safeAvatarLetter}</div>
                 <div class="sidebar-admin-meta">
-                    <div class="sidebar-admin-name">${adminName}</div>
+                    <div class="sidebar-admin-name">${safeAdminName}</div>
                     <button type="button" class="sidebar-signout-btn" id="sidebarSignOutBtn">Sign Out</button>
                 </div>
             </div>
@@ -164,6 +177,8 @@
                 sessionStorage.removeItem('adminUser');
                 sessionStorage.removeItem('loginTime');
                 sessionStorage.removeItem('adminLastActivity');
+                sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+                sessionStorage.removeItem(ADMIN_SESSION_EXPIRES_KEY);
                 window.location.href = 'login.html';
             });
         }

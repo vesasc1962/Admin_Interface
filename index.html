@@ -183,6 +183,23 @@
     <script src="js/config.js?v=20260211"></script>
     <script src="js/api.js"></script>
     <script>
+        function esc(value) {
+            if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeBoardStatus(value) {
+            const status = String(value || '').trim().toLowerCase();
+            if (status === 'active' || status === 'online') return 'active';
+            if (status === 'offline' || status === 'inactive') return 'offline';
+            return 'offline';
+        }
+
         // Connect WebSocket
         connectWebSocket();
 
@@ -226,14 +243,14 @@
                     } else {
                         tbody.innerHTML = result.boards.map(board => `
                             <tr>
-                                <td><strong>${board.boardId}</strong></td>
-                                <td>${board.roomNumber}</td>
+                                <td><strong>${esc(board.boardId)}</strong></td>
+                                <td>${esc(board.roomNumber)}</td>
                                 <td>
-                                    <span class="badge badge-${board.status}">
-                                        ${board.status}
+                                    <span class="badge badge-${normalizeBoardStatus(board.status)}">
+                                        ${esc(normalizeBoardStatus(board.status))}
                                     </span>
                                 </td>
-                                <td>${timeSince(board.lastSeen)}</td>
+                                <td>${esc(timeSince(board.lastSeen))}</td>
                             </tr>
                         `).join('');
                     }

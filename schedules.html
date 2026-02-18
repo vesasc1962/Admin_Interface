@@ -179,6 +179,28 @@
         let schedules = [];
         let currentFilter = 'all';
 
+        function esc(value) {
+            if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeScheduleState(value) {
+            const state = String(value || '').trim().toLowerCase();
+            if (['active', 'scheduled', 'inactive', 'expired'].includes(state)) return state;
+            return 'scheduled';
+        }
+
+        function normalizePriority(value) {
+            const priority = String(value || '').trim().toLowerCase();
+            if (priority === 'emergency') return 'emergency';
+            return 'normal';
+        }
+
         connectWebSocket();
         addWSListener((data) => {
             if (data && data.type && data.type.includes('notice')) {
@@ -187,7 +209,7 @@
         });
 
         function getStatus(schedule) {
-            return String(schedule.state || '').toLowerCase() || 'scheduled';
+            return normalizeScheduleState(schedule && schedule.state);
         }
 
         function renderSummary() {
@@ -241,6 +263,7 @@
 
             tbody.innerHTML = filtered.map((schedule) => {
                 const status = getStatus(schedule);
+                const priority = normalizePriority(schedule.priority);
                 const preview = (schedule.content || '').length > 40
                     ? schedule.content.substring(0, 40) + '...'
                     : (schedule.content || '');
@@ -249,25 +272,26 @@
                     : `${(schedule.targetBoards || '').split('|').filter(Boolean).length} boards`;
                 const isRecurring = String(schedule.isRecurring) === 'true' || schedule.isRecurring === true;
                 const recurringInfo = isRecurring
-                    ? `<span class="badge badge-info" title="Daily ${schedule.dailyStartTime}-${schedule.dailyEndTime}">Daily</span>`
+                    ? `<span class="badge badge-info" title="Daily ${esc(schedule.dailyStartTime)}-${esc(schedule.dailyEndTime)}">Daily</span>`
                     : '';
                 const enabled = String(schedule.enabled) === 'true' || schedule.enabled === true;
                 const toggleLabel = enabled ? 'Disable' : 'Enable';
                 const toggleClass = enabled ? 'btn-secondary' : 'btn-success';
+                const safeScheduleId = String(schedule.scheduleId || '').replace(/[^A-Za-z0-9_-]/g, '');
 
                 return `
                     <tr>
-                        <td><strong>${schedule.title}</strong> ${recurringInfo}</td>
-                        <td>${preview}</td>
-                        <td><span class="badge badge-${schedule.priority}">${schedule.priority}</span></td>
-                        <td>${targets}</td>
-                        <td>${formatDate(schedule.startTime)}</td>
-                        <td>${formatDate(schedule.endTime)}</td>
-                        <td><span class="badge badge-${status}">${status}</span></td>
+                        <td><strong>${esc(schedule.title)}</strong> ${recurringInfo}</td>
+                        <td>${esc(preview)}</td>
+                        <td><span class="badge badge-${priority}">${esc(priority)}</span></td>
+                        <td>${esc(targets)}</td>
+                        <td>${esc(formatDate(schedule.startTime))}</td>
+                        <td>${esc(formatDate(schedule.endTime))}</td>
+                        <td><span class="badge badge-${status}">${esc(status)}</span></td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn ${toggleClass} btn-sm" onclick="toggleSchedule('${schedule.scheduleId}', ${enabled ? 'false' : 'true'})">${toggleLabel}</button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${schedule.scheduleId}')">
+                                <button class="btn ${toggleClass} btn-sm" onclick="toggleSchedule('${safeScheduleId}', ${enabled ? 'false' : 'true'})">${esc(toggleLabel)}</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${safeScheduleId}')">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                                     </svg>

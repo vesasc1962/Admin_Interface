@@ -180,6 +180,16 @@
         let boards = [];
         let boardSearchQuery = '';
 
+        function esc(value) {
+            if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         connectWebSocket();
         addWSListener((data) => {
             if (data.type.includes('board')) loadBoards();
@@ -187,8 +197,9 @@
 
         function normalizeStatus(status) {
             const value = String(status || '').toLowerCase();
-            if (value === 'online') return 'active';
-            return value;
+            if (value === 'online' || value === 'active') return 'active';
+            if (value === 'offline' || value === 'inactive') return 'offline';
+            return 'offline';
         }
 
         function setBoardSearch(value) {
@@ -250,14 +261,14 @@
 
             tbody.innerHTML = filtered.map(board => `
                 <tr>
-                    <td><strong>${board.boardId}</strong></td>
-                    <td>${board.roomNumber}</td>
-                    <td>${board.username}</td>
-                    <td><span class="badge badge-${normalizeStatus(board.status)}">${normalizeStatus(board.status)}</span></td>
-                    <td>${timeSince(board.lastSeen)}</td>
-                    <td>${formatDate(board.registeredAt)}</td>
+                    <td><strong>${esc(board.boardId)}</strong></td>
+                    <td>${esc(board.roomNumber)}</td>
+                    <td>${esc(board.username)}</td>
+                    <td><span class="badge badge-${normalizeStatus(board.status)}">${esc(normalizeStatus(board.status))}</span></td>
+                    <td>${esc(timeSince(board.lastSeen))}</td>
+                    <td>${esc(formatDate(board.registeredAt))}</td>
                     <td>
-                        <button class="btn btn-danger btn-sm" onclick="removeBoard('${board.boardId}')">
+                        <button class="btn btn-danger btn-sm" onclick="removeBoard('${String(board.boardId || '').replace(/[^A-Za-z0-9._:-]/g, '')}')">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                             </svg>
