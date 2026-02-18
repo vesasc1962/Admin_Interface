@@ -84,6 +84,11 @@ Runtime configuration (server URLs and refresh interval)
   - API server origin (SERVER_URL)
   - WebSocket origin (WS_URL)
   - Auto-refresh interval (AUTO_REFRESH_INTERVAL)
+- URL normalization rules (security-relevant):
+  - Only http/https origins are accepted for SERVER_URL.
+  - Only ws/wss origins are accepted for WS_URL (http/https inputs are normalized to ws/wss when deriving).
+  - Non-origin/opaque URLs (e.g., file:, data:, javascript:) are rejected.
+  - Any embedded credentials in URLs are discarded by storing only the origin.
 - Configuration precedence:
   1) Query string override (session-scoped by default):
      - ?server=https://example-origin and optional ?ws=wss://example-origin
@@ -334,12 +339,15 @@ Threat: Network-level threats (MITM, DNS poisoning, hostile Wi-Fi)
 ---------------------------------
 
 How passwords are stored (hashing, salting)
-- The Admin UI never stores raw passwords at rest.
+- The Admin UI never stores raw passwords at rest; it only transmits credentials to the backend during
+  login and password-change operations.
 - Password storage is a backend responsibility.
-- Expected/required backend behavior for institutional approval:
-  - Store passwords only as salted, slow hashes (e.g., PBKDF2/bcrypt/scrypt/Argon2).
-  - Use a unique random salt per password.
-  - Use constant-time comparison for verification.
+- In the companion backend implementation used with this Admin UI (deployed separately from this repo):
+  - Admin and board passwords are stored as salted PBKDF2-SHA512 hashes.
+  - Stored format: pbkdf2_sha512$<iterations>$<saltHex>$<hashHex>
+  - Default parameters used in code: 210,000 iterations, per-password random salt, 64-byte derived key.
+  - Verification uses timing-safe comparisons.
+  - Legacy plaintext values are detected and automatically upgraded to PBKDF2 on next successful login.
 
 Why raw passwords are never stored
 - Raw passwords provide immediate compromise value if logs/files are accessed.
@@ -350,17 +358,19 @@ How admin authentication is protected (end-to-end)
   - Transmits credentials only to the backend login endpoint.
   - Stores only the returned session token in sessionStorage.
   - Sends the token in Authorization headers for all protected requests.
-- Backend (required):
-  - Validate credentials against a salted password hash.
-  - Enforce rate limits and lockouts to reduce brute force success.
-  - Issue high-entropy session tokens and validate them server-side on each request.
+- Backend (companion implementation used by this project):
+  - Validates credentials against the salted password hash.
+  - Enforces rate limiting on login attempts and applies temporary lockouts after repeated failures.
+  - Issues high-entropy session tokens (not JWTs): a random token stored server-side in an in-memory session map.
+  - Protects all admin-sensitive endpoints by requiring Authorization: Bearer <token>.
 
 How session expiration works
 - UI:
   - Local inactivity timer clears sessionStorage after configurable minutes of inactivity.
 - Backend:
-  - Server-side TTL must expire tokens regardless of client state.
-  - Optionally bind sessions to user-agent and/or IP to reduce token replay risk.
+  - Server-side TTL expires sessions regardless of client state, with sliding expiration on activity.
+  - Sessions can be bound to the requesting user-agent string (enabled by default in code) and optionally to IP.
+  - In-memory sessions mean a backend restart invalidates all active sessions (forced re-login).
 
 Why a breach does NOT expose all college credentials
 - This system is not designed to store campus-wide identities or academic records.
@@ -371,6 +381,8 @@ Why a breach does NOT expose all college credentials
 If anything is missing or weak (and fixes)
 - Missing: MFA/SSO for admin login.
   - Fix: Integrate with institutional identity provider (SAML/OIDC) and enforce MFA.
+- Missing: Multiple distinct admin accounts + roles (RBAC).
+  - Fix: Store per-admin credential records and enforce least-privilege permissions, with per-admin audit attribution.
 - Weakness: If the backend stores credentials in local files, filesystem permissions and backups must be hardened.
   - Fix: Restrict OS-level access, encrypt at rest, and centralize secrets in an approved secrets manager.
 
@@ -405,6 +417,8 @@ Why publishing ONLY the Admin App is safe (when done correctly)
 - This repository contains only:
   - Static HTML/CSS/JS frontend code.
   - No backend credential files, no data directory, and no server-side secrets.
+- The Admin UI is designed to have its backend origin configured at runtime (Settings page or tab-scoped query override),
+  and defaults to a localhost development origin in code to avoid publishing production endpoints.
 - Backend deployment secrets (credentials, allowed origins, network exposure settings) must be external to the repo.
 - The Admin UI is not useful to an attacker without a reachable backend and valid credentials.
 
@@ -514,4 +528,3 @@ Responsibilities remaining with deployment teams:
 - Identity governance (MFA/SSO, admin account management).
 - Network controls (firewalls, allowlists, VPN where required).
 - Monitoring, logging, incident response, and secure backup/restore.
-
